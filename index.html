@@ -302,11 +302,18 @@
     </div>
 
     <div class="field">
-      <label for="selectWidth">Largura do papel</label>
-      <select id="selectWidth">
-        <option value="32">58 mm (32 colunas)</option>
-        <option value="48">80 mm (48 colunas)</option>
-      </select>
+      <label for="inputWidth">Colunas por linha (calibre com o botão abaixo)</label>
+      <div class="field-row">
+        <input type="text" inputmode="numeric" id="inputWidth" value="32">
+        <button class="btn-inline" id="btnPreset32" type="button">58&nbsp;mm</button>
+        <button class="btn-inline" id="btnPreset48" type="button">80&nbsp;mm</button>
+      </div>
+    </div>
+    <div class="field">
+      <button class="btn-inline" id="btnCalibrate" type="button" style="width:100%">🖨 Imprimir teste de largura</button>
+      <p style="font-size:0.72rem;color:var(--ink-soft);margin:0.4rem 0 0 0;">
+        Imprime réguas numeradas. Veja em qual número a linha começa a quebrar e ajuste as colunas acima para esse valor (normalmente um pouco menor que o nominal, ex.: papel de 57,5&nbsp;mm costuma imprimir bem com 30–31 colunas).
+      </p>
     </div>
 
     <div class="field">
@@ -398,7 +405,10 @@
     inputCity: document.getElementById("inputCity"),
     btnGeo: document.getElementById("btnGeo"),
     categoryChips: document.getElementById("categoryChips"),
-    selectWidth: document.getElementById("selectWidth"),
+    inputWidth: document.getElementById("inputWidth"),
+    btnPreset32: document.getElementById("btnPreset32"),
+    btnPreset48: document.getElementById("btnPreset48"),
+    btnCalibrate: document.getElementById("btnCalibrate"),
     toggleAccents: document.getElementById("toggleAccents"),
     toggleCut: document.getElementById("toggleCut"),
     btnConnect: document.getElementById("btnConnect"),
@@ -434,6 +444,85 @@
 
   function removerAcentos(str){
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  // Substitui pontuação tipográfica comum (aspas curvas, travessões, grau,
+  // reticências, marcadores) por equivalentes ASCII e remove qualquer
+  // caractere restante fora do intervalo ASCII imprimível. Isso evita
+  // caracteres corrompidos em impressoras que só suportam uma única
+  // codepage de 8 bits (a maioria das mini impressoras ESC/POS).
+  const TYPO_MAP = {
+    "\u2018":"'", "\u2019":"'", "\u201A":"'", "\u2032":"'",
+    "\u201C":"\"", "\u201D":"\"", "\u201E":"\"", "\u2033":"\"",
+    "\u00AB":"\"", "\u00BB":"\"",
+    "\u2013":"-", "\u2014":"-", "\u2212":"-",
+    "\u2022":"-", "\u25CF":"-", "\u2027":"-", "\u00B7":"-",
+    "\u2026":"...",
+    "\u00B0":"",
+    "\u00A0":" "
+  };
+  function sanitizeForPrint(str){
+    let s = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    s = s.replace(/[\u2018\u2019\u201A\u2032\u201C\u201D\u201E\u2033\u00AB\u00BB\u2013\u2014\u2212\u2022\u25CF\u2027\u00B7\u2026\u00B0\u00A0]/g, function(ch){
+      return TYPO_MAP[ch] !== undefined ? TYPO_MAP[ch] : ch;
+    });
+    // rede de segurança final: remove qualquer caractere fora do ASCII imprimível
+    s = s.replace(/[^\x20-\x7E]/g, "");
+    return s;
+  }
+
+  // Quebra manual de texto em linhas de no máximo `width` colunas.
+  // Fazemos a quebra no cliente (em vez de depender do auto-wrap da
+  // impressora) porque muitos clones ESC/POS quebram de forma inconsistente
+  // quando a largura configurada não bate exatamente com a largura física.
+  function wrapText(text, width){
+    const w = Math.max(parseInt(width, 10) || 32, 8);
+    const words = String(text).split(/\s+/).filter(Boolean);
+    if(!words.length) return [""];
+    const lines = [];
+    let cur = "";
+    words.forEach(function(rawWord){
+      let word = rawWord;
+      while(word.length > w){
+        if(cur){ lines.push(cur); cur = ""; }
+        lines.push(word.slice(0, w));
+        word = word.slice(w);
+      }
+      if(!cur){
+        cur = word;
+      } else if((cur + " " + word).length <= w){
+        cur += " " + word;
+      } else {
+        lines.push(cur);
+        cur = word;
+      }
+    });
+    if(cur) lines.push(cur);
+    return lines.length ? lines : [""];
+  }
+
+  // Expande as linhas lógicas (uma por "ideia") em linhas físicas já
+  // quebradas na largura configurada, prontas para tela ou impressora.
+  function wrapLogicalLines(lines, width){
+    const out = [];
+    lines.forEach(function(line){
+      if(line.type === "divider" || line.type === "spacer"){
+        out.push(line);
+        return;
+      }
+      if(line.type === "news"){
+        const prefix = line.index + ". ";
+        const avail = Math.max(width - prefix.length, 8);
+        const wrapped = wrapText(line.text, avail);
+        wrapped.forEach(function(w, i){
+          out.push({ type:"news", text: i === 0 ? prefix + w : " ".repeat(prefix.length) + w });
+        });
+        return;
+      }
+      const wrapped = wrapText(line.text, width);
+      wrapped.forEach(function(w){ out.push({ type: line.type, text: w }); });
+    });
+    return out;
   }
 
   function escapeHtml(str){
@@ -557,7 +646,7 @@
      ========================================================= */
   function renderPreview(){
     document.documentElement.style.setProperty("--paper-ch", state.paperWidth);
-    const lines = buildLines();
+    const lines = wrapLogicalLines(buildLines(), state.paperWidth);
     const frag = document.createDocumentFragment();
 
     lines.forEach(function(line){
@@ -577,10 +666,10 @@
         div.textContent = line.text;
       } else if(line.type === "news"){
         div.classList.add("r-news");
-        div.textContent = line.index + ". " + line.text;
+        div.textContent = line.text;
       } else if(line.type === "divider"){
         div.classList.add("r-divider");
-        div.textContent = "\u2500".repeat(Math.min(state.paperWidth, 48));
+        div.textContent = "\u2500".repeat(Math.min(state.paperWidth, 64));
       } else if(line.type === "spacer"){
         div.classList.add("r-spacer");
       }
@@ -598,25 +687,30 @@
   function bytesInit(){ return [ESC, 0x40]; }
   function bytesAlign(n){ return [ESC, 0x61, n]; }        // 0 esquerda, 1 centro
   function bytesBold(on){ return [ESC, 0x45, on ? 1 : 0]; }
-  function bytesDouble(on){ return [GS, 0x21, on ? 0x11 : 0x00]; }
+  // GS ! n -- bits 0-3 = magnificação de ALTURA, bits 4-7 = magnificação de
+  // LARGURA. Usamos apenas altura dupla (0x01) no cabeçalho: isso o deixa
+  // em destaque sem dobrar a largura de cada caractere, o que do contrário
+  // reduziria pela metade a quantidade de colunas disponíveis naquela linha
+  // e causaria quebras extras.
+  function bytesDoubleHeight(on){ return [GS, 0x21, on ? 0x01 : 0x00]; }
   function bytesFeed(n){ return [ESC, 0x64, n]; }
   function bytesCut(){ return [GS, 0x56, 0x01]; }
 
   function textToBytes(str){
-    const cleaned = state.removeAccents ? removerAcentos(str) : str;
+    const cleaned = state.removeAccents ? sanitizeForPrint(str) : str;
     return Array.from(new TextEncoder().encode(cleaned + "\n"));
   }
 
   function buildEscPos(){
-    const lines = buildLines();
+    const lines = wrapLogicalLines(buildLines(), state.paperWidth);
     let out = [];
     out = out.concat(bytesInit());
 
     lines.forEach(function(line){
       if(line.type === "header"){
-        out = out.concat(bytesAlign(1), bytesBold(true), bytesDouble(true));
+        out = out.concat(bytesAlign(1), bytesBold(true), bytesDoubleHeight(true));
         out = out.concat(textToBytes(line.text));
-        out = out.concat(bytesDouble(false), bytesBold(false), bytesAlign(0));
+        out = out.concat(bytesDoubleHeight(false), bytesBold(false), bytesAlign(0));
       } else if(line.type === "sub"){
         out = out.concat(bytesAlign(1));
         out = out.concat(textToBytes(line.text));
@@ -628,7 +722,7 @@
       } else if(line.type === "item"){
         out = out.concat(textToBytes(line.text));
       } else if(line.type === "news"){
-        out = out.concat(textToBytes(line.index + ". " + line.text));
+        out = out.concat(textToBytes(line.text));
       } else if(line.type === "divider"){
         out = out.concat(textToBytes("-".repeat(state.paperWidth)));
       } else if(line.type === "spacer"){
@@ -638,6 +732,27 @@
 
     out = out.concat(bytesFeed(3));
     if(state.cutPaper) out = out.concat(bytesCut());
+    return new Uint8Array(out);
+  }
+
+  // Imprime réguas numeradas para o usuário calibrar a quantidade real de
+  // colunas que a impressora consegue imprimir em uma linha sem quebrar.
+  function buildCalibrationEscPos(){
+    let out = [];
+    out = out.concat(bytesInit(), bytesAlign(0));
+    out = out.concat(textToBytes("TESTE DE LARGURA"));
+    out = out.concat(textToBytes("-".repeat(64)));
+    for(let start = 1; start <= 64; start += 10){
+      let ruler = "";
+      for(let i = start; i < start + 10 && i <= 64; i++){
+        ruler += String(i % 10);
+      }
+      out = out.concat(textToBytes(ruler));
+    }
+    out = out.concat(textToBytes("-".repeat(64)));
+    out = out.concat(textToBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ"));
+    out = out.concat(textToBytes("Ajuste as colunas para o ultimo numero legivel antes da quebra."));
+    out = out.concat(bytesFeed(3));
     return new Uint8Array(out);
   }
 
@@ -842,9 +957,32 @@
     Array.from(el.categoryChips.children).forEach(c => c.classList.toggle("active", c === chip));
   });
 
-  el.selectWidth.addEventListener("change", function(){
-    state.paperWidth = parseInt(el.selectWidth.value, 10);
+  function applyWidth(n){
+    const clamped = Math.min(Math.max(parseInt(n, 10) || 32, 16), 64);
+    state.paperWidth = clamped;
+    el.inputWidth.value = clamped;
     renderPreview();
+  }
+
+  el.inputWidth.addEventListener("change", function(){ applyWidth(el.inputWidth.value); });
+  el.btnPreset32.addEventListener("click", function(){ applyWidth(32); });
+  el.btnPreset48.addEventListener("click", function(){ applyWidth(48); });
+
+  el.btnCalibrate.addEventListener("click", async function(){
+    hideMsg();
+    if(!state.characteristic){
+      showMsg("Conecte a impressora antes de imprimir o teste de largura.");
+      return;
+    }
+    setBusy(el.btnCalibrate, "Imprimindo teste…");
+    try{
+      await sendToPrinter(buildCalibrationEscPos());
+      showMsg("Teste enviado. Veja no papel onde as réguas quebram e ajuste as colunas.", "info");
+    } catch(err){
+      showMsg(err.message || "Falha ao imprimir o teste.");
+    } finally {
+      clearBusy(el.btnCalibrate);
+    }
   });
 
   el.toggleAccents.addEventListener("change", function(){
