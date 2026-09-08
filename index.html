@@ -1,749 +1,880 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Diligências — Mapa de Cobertura</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Despacho Matinal — Clima &amp; Notícias</title>
 <style>
   :root{
-    --bg:#ffffff;
-    --panel:#ffffff;
-    --line:#e7e7e9;
-    --ink:#16171b;
-    --muted:#84858c;
-    --accent:#4f46e5;
-    --amber:#d98a2b;
-    --teal:#1f8f6f;
-    --danger:#d54848;
-    --fog:rgba(17,18,22,0.90);
-    --radius:14px;
-    --shadow:0 8px 28px rgba(20,20,30,0.14);
-    --topbar-h:56px;
+    --paper:#F7F3EA;
+    --panel:#EFE8D6;
+    --ink:#221F1B;
+    --ink-soft:#6B6355;
+    --line:#D9CFB8;
+    --accent:#A13D2C;
+    --accent-ink:#F7F3EA;
+    --ok:#3F6B4B;
+    --warn:#A13D2C;
+    --mono: ui-monospace, "SFMono-Regular", "IBM Plex Mono", "Courier New", monospace;
+    --display: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --radius: 2px;
   }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-  html,body{height:100%;margin:0;}
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
   body{
-    font-family:'Inter',system-ui,sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--mono);
+    line-height:1.45;
+    min-height:100vh;
+    padding: clamp(0.75rem, 3vw, 2rem);
+    -webkit-tap-highlight-color: transparent;
+  }
+  *:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+  .app{
+    width:100%;
+    max-width: 30rem;
+    margin: 0 auto;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:0.75rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 2px solid var(--ink);
+  }
+  .title-block h1{
+    font-family: var(--display);
+    font-size: clamp(1.4rem, 5vw, 1.85rem);
+    font-weight:700;
+    margin:0 0 0.15rem 0;
+    letter-spacing: 0.01em;
+  }
+  .title-block p{
+    margin:0;
+    font-size:0.8rem;
+    color: var(--ink-soft);
+    text-transform: capitalize;
+  }
+  #btnSettings{
+    flex-shrink:0;
+    width:2.4rem;
+    height:2.4rem;
+    border:1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    font-size:1.1rem;
+    cursor:pointer;
+    border-radius: var(--radius);
+  }
+  #btnSettings:hover{ background: var(--panel); }
+
+  /* ---------- Status strip ---------- */
+  .status{
+    display:flex;
+    align-items:center;
+    gap:0.5rem;
+    font-size:0.82rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px dashed var(--line);
+    color: var(--ink-soft);
+  }
+  .status .dot{
+    width:0.55rem;
+    height:0.55rem;
+    border-radius:50%;
+    background: var(--warn);
+    flex-shrink:0;
+  }
+  .status.is-ok .dot{ background: var(--ok); }
+  .status.is-ok{ color: var(--ok); }
+
+  /* ---------- Buttons row ---------- */
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.5rem;
+    padding: 0.9rem 0;
+  }
+  button.action{
+    flex:1 1 auto;
+    min-width: 8.5rem;
+    padding: 0.7rem 0.8rem;
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    cursor:pointer;
+    border-radius: var(--radius);
+    transition: transform 0.08s ease, opacity 0.15s ease;
+  }
+  button.action.secondary{
+    background: transparent;
+    color: var(--ink);
+  }
+  button.action.accent{
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  button.action:hover{ opacity:0.85; }
+  button.action:active{ transform: scale(0.98); }
+  button.action:disabled{
+    opacity:0.4;
+    cursor:not-allowed;
+    transform:none;
+  }
+
+  /* ---------- Alert / message ---------- */
+  .msg{
+    display:none;
+    font-size:0.82rem;
+    padding:0.6rem 0.75rem;
+    border-left:3px solid var(--accent);
+    background: var(--panel);
+    color: var(--ink);
+    margin-bottom:0.9rem;
+  }
+  .msg.show{ display:block; }
+  .msg.info{ border-left-color: var(--ok); }
+
+  /* ---------- Settings panel ---------- */
+  .panel{
+    display:none;
+    background: var(--panel);
+    border:1px solid var(--line);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: var(--radius);
+  }
+  .panel.open{ display:block; }
+  .panel h2{
+    font-family: var(--display);
+    font-size:1.05rem;
+    margin: 0 0 0.85rem 0;
+  }
+  .field{ margin-bottom: 0.85rem; }
+  .field:last-child{ margin-bottom:0; }
+  .field label{
+    display:block;
+    font-size:0.75rem;
+    color: var(--ink-soft);
+    margin-bottom:0.3rem;
+  }
+  .field-row{ display:flex; gap:0.5rem; }
+  .field-row > *{ flex:1; }
+  input[type="text"], select{
+    width:100%;
+    padding:0.55rem 0.6rem;
+    font-family: var(--mono);
+    font-size:0.85rem;
+    border:1px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: var(--radius);
+  }
+  .btn-inline{
+    padding:0.55rem 0.7rem;
+    font-family: var(--mono);
+    font-size:0.78rem;
+    border:1px solid var(--ink);
+    background: transparent;
+    color: var(--ink);
+    cursor:pointer;
+    border-radius: var(--radius);
+    white-space:nowrap;
+  }
+  .btn-inline:hover{ background: var(--paper); }
+  .toggle{
+    display:flex;
+    align-items:center;
+    gap:0.5rem;
+    font-size:0.8rem;
+    cursor:pointer;
+  }
+  .toggle input{ width:1rem; height:1rem; accent-color: var(--accent); }
+  .chips{ display:flex; flex-wrap:wrap; gap:0.4rem; }
+  .chip{
+    padding:0.35rem 0.65rem;
+    font-size:0.72rem;
+    border:1px solid var(--ink);
+    background:transparent;
     color:var(--ink);
-    background:#0e0e11;
-    overflow:hidden;
+    cursor:pointer;
+    border-radius: 999px;
   }
-  button{font-family:inherit;}
-  #app{display:flex;flex-direction:column;height:100dvh;}
+  .chip.active{ background: var(--ink); color: var(--paper); }
 
-  /* ---------------- TOPBAR ---------------- */
-  #topbar{
-    height:var(--topbar-h);flex-shrink:0;
-    display:flex;align-items:center;gap:10px;
-    padding:0 12px;background:var(--ink);color:#fff;
-    z-index:60;
+  /* ---------- Receipt preview ---------- */
+  .preview-wrap{
+    display:flex;
+    justify-content:center;
+    padding: 1rem 0 0.5rem 0;
   }
-  #hamburger-btn{
-    width:36px;height:36px;border-radius:9px;background:transparent;border:none;color:#fff;
-    display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+  .receipt{
+    width: 100%;
+    max-width: calc(var(--paper-ch, 32) * 1.05ch + 2rem);
+    background: #FFFDF8;
+    border: 1px solid var(--line);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.02);
+    padding: 1.1rem 1rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    color: var(--ink);
   }
-  #hamburger-btn:active{background:rgba(255,255,255,0.1);}
-  #hamburger-btn svg{width:20px;height:20px;}
-  #brand{font-weight:600;font-size:15px;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  #topbar-spacer{flex:1;}
-  #progress-chip{
-    display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.08);
-    padding:5px 10px;border-radius:20px;flex-shrink:0;
+  .r-line{
+    width: calc(var(--paper-ch, 32) * 1ch);
+    max-width: 100%;
+    margin: 0 auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
-  #progress-chip .pct{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;}
-  #progress-ring-track{width:44px;height:5px;border-radius:3px;background:rgba(255,255,255,0.15);overflow:hidden;}
-  #progress-ring-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--amber),var(--teal));transition:width .35s ease;}
+  .r-header{ text-align:center; font-weight:700; font-size:1.05em; letter-spacing:0.04em; margin-bottom:0.15rem; }
+  .r-sub{ text-align:center; color: var(--ink-soft); margin-bottom:0.15rem; }
+  .r-section{ font-weight:700; margin-top:0.5rem; margin-bottom:0.15rem; }
+  .r-item{ margin-bottom:0.1rem; }
+  .r-news{ margin-bottom:0.35rem; }
+  .r-divider{ text-align:center; color: var(--ink-soft); margin: 0.35rem 0; letter-spacing:0.05em; }
+  .r-spacer{ height:0.6rem; }
+  .r-empty{ text-align:center; color: var(--ink-soft); padding: 1.5rem 0; font-style:italic; }
 
-  /* ---------------- LAYOUT ---------------- */
-  #main{flex:1;display:flex;position:relative;min-height:0;}
-  #map-wrap{flex:1;position:relative;background:#dcdde0;}
-  #map{position:absolute;inset:0;}
-  #fog-canvas{position:absolute;inset:0;pointer-events:none;}
-
-  /* ---------------- BACKDROP (mobile) ---------------- */
-  #backdrop{
-    position:fixed;inset:0;background:rgba(10,10,14,0.4);z-index:40;
-    opacity:0;pointer-events:none;transition:opacity .2s ease;
+  footer{
+    padding-top:1rem;
+    font-size:0.72rem;
+    color: var(--ink-soft);
+    text-align:center;
   }
-  #backdrop.show{opacity:1;pointer-events:auto;}
+  footer a{ color: var(--ink-soft); }
 
-  /* ---------------- PANEL (drawer on mobile / sidebar on desktop) ---------------- */
-  #panel{
-    position:fixed;left:0;right:0;bottom:0;
-    height:78vh;max-height:640px;
-    background:var(--panel);
-    border-radius:18px 18px 0 0;
-    box-shadow:0 -6px 30px rgba(0,0,0,0.22);
-    transform:translateY(102%);
-    transition:transform .28s cubic-bezier(.32,.72,0,1);
-    z-index:50;
-    display:flex;flex-direction:column;
-    overflow:hidden;
-  }
-  #panel.open{transform:translateY(0);}
-  #drawer-handle{width:36px;height:4px;background:var(--line);border-radius:3px;margin:10px auto 4px;flex-shrink:0;}
-
-  .panel-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-
-  .sec{padding:14px 18px;border-bottom:1px solid var(--line);}
-  .sec:last-child{border-bottom:none;}
-  .sec-label{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:0 0 10px;}
-
-  .row{display:flex;gap:8px;align-items:center;}
-  select, input[type=text]{
-    font-family:inherit;font-size:13.5px;border:1px solid var(--line);border-radius:9px;
-    padding:9px 10px;color:var(--ink);background:#fafafa;width:100%;
-  }
-  select:focus, input:focus{outline:none;border-color:var(--accent);background:#fff;}
-
-  .btn{
-    border:none;border-radius:9px;padding:9px 12px;font-size:13px;font-weight:600;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;
-  }
-  .btn-icon{width:36px;height:36px;padding:0;flex-shrink:0;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);}
-  .btn-icon:active{background:#f2f2f4;}
-  .btn-primary{background:var(--ink);color:#fff;}
-  .btn-primary:active{background:#000;}
-  .btn-outline{background:#fff;border:1px solid var(--line);color:var(--ink);}
-  .btn-outline:active{background:#f4f4f5;}
-  .btn-danger-text{background:transparent;color:var(--danger);}
-  .btn-block{width:100%;}
-  .btn-teal{background:var(--teal);color:#fff;}
-  .btn-teal.on{background:var(--ink);}
-
-  #user-badge{
-    font-family:'IBM Plex Mono',monospace;font-size:11.5px;background:#f2f2f4;
-    padding:6px 10px;border-radius:8px;color:var(--ink);white-space:nowrap;
-  }
-
-  .hint{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5;}
-
-  #tabs{display:flex;border-bottom:1px solid var(--line);padding:0 18px;}
-  .tab{
-    padding:11px 4px;margin-right:20px;font-size:13px;font-weight:600;color:var(--muted);
-    border-bottom:2px solid transparent;cursor:pointer;
-  }
-  .tab.active{color:var(--ink);border-color:var(--ink);}
-  .tab .count{font-family:'IBM Plex Mono',monospace;font-weight:400;margin-left:3px;color:var(--muted);}
-
-  #list-wrap{padding:10px 14px 20px;}
-  .loc-card{
-    background:#fff;border:1px solid var(--line);border-radius:12px;
-    padding:11px 13px;margin-bottom:8px;cursor:pointer;
-  }
-  .loc-card:active{background:#f7f7f8;}
-  .loc-card .row1{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
-  .loc-card .name{font-weight:600;font-size:13.5px;}
-  .loc-card .addr{font-size:11.5px;color:var(--muted);margin-top:2px;}
-  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px;}
-  .dot.pending{background:var(--amber);}
-  .dot.done{background:var(--teal);}
-  .loc-card .meta{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:6px;}
-  .empty-msg{color:var(--muted);font-size:12.5px;padding:24px 8px;text-align:center;line-height:1.6;}
-
-  /* ---------------- FAB ---------------- */
-  #fab-add{
-    position:absolute;right:16px;bottom:16px;width:54px;height:54px;border-radius:50%;
-    background:var(--accent);color:#fff;border:none;box-shadow:var(--shadow);
-    display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;z-index:30;
-    transition:background .15s ease, transform .15s ease;
-  }
-  #fab-add.active{background:var(--danger);transform:rotate(45deg);}
-  #fab-add svg{width:24px;height:24px;}
-
-  #status-chip{
-    position:absolute;top:12px;left:50%;transform:translateX(-50%);
-    background:var(--ink);color:#fff;padding:7px 14px;border-radius:20px;font-size:12px;
-    display:none;align-items:center;gap:7px;z-index:25;box-shadow:var(--shadow);
-  }
-  #status-chip.show{display:flex;}
-  #status-chip .pulse{width:8px;height:8px;border-radius:50%;background:#5ee6a8;animation:pulse 1.4s infinite;}
-  @keyframes pulse{0%{opacity:1;}50%{opacity:.35;}100%{opacity:1;}}
-
-  #legend{
-    position:absolute;bottom:14px;left:14px;background:rgba(17,18,22,0.85);color:#fff;
-    padding:8px 12px;border-radius:9px;font-size:10.5px;display:flex;gap:12px;
-    font-family:'IBM Plex Mono',monospace;z-index:20;
-  }
-  .legend-item{display:flex;align-items:center;gap:5px;}
-  .legend-dot{width:7px;height:7px;border-radius:50%;}
-
-  #new-loc-card{
-    position:absolute;left:14px;right:14px;bottom:14px;background:#fff;border-radius:16px;
-    box-shadow:var(--shadow);padding:16px;z-index:35;display:none;
-  }
-  #new-loc-card h3{margin:0 0 10px;font-size:14.5px;font-weight:700;}
-  #new-loc-card label{font-size:11px;color:var(--muted);display:block;margin-top:9px;}
-  #new-loc-card input, #new-loc-card textarea{
-    width:100%;border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px;
-    font-family:inherit;margin-top:4px;
-  }
-  #new-loc-card textarea{resize:vertical;min-height:44px;}
-  #new-loc-card .actions{display:flex;gap:8px;margin-top:14px;}
-
-  #toast-container{position:absolute;top:12px;right:12px;left:12px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:70;pointer-events:none;}
-  .toast{
-    background:var(--ink);color:#fff;padding:10px 14px;border-radius:10px;font-size:12.5px;
-    box-shadow:var(--shadow);animation:fadeIn .2s ease;max-width:88%;
-  }
-  @keyframes fadeIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
-
-  .leaflet-popup-content-wrapper{border-radius:12px;}
-  .leaflet-control-attribution{font-size:9.5px !important;}
-
-  /* ---------------- DESKTOP ---------------- */
-  @media (min-width:900px){
-    #hamburger-btn{display:none;}
-    #backdrop{display:none;}
-    #panel{
-      position:static;width:360px;height:auto;max-height:none;border-radius:0;
-      box-shadow:none;border-right:1px solid var(--line);transform:none;
-    }
-    #drawer-handle{display:none;}
-    #new-loc-card{left:auto;width:300px;}
+  @media (max-width: 380px){
+    button.action{ min-width: 100%; }
   }
 </style>
 </head>
 <body>
-<div id="app">
+<div class="app">
 
-  <div id="topbar">
-    <button id="hamburger-btn" aria-label="Abrir painel">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div id="brand">Diligências</div>
-    <div id="topbar-spacer"></div>
-    <div id="progress-chip">
-      <div id="progress-ring-track"><div id="progress-ring-fill"></div></div>
-      <span class="pct" id="progress-pct">0%</span>
+  <header>
+    <div class="title-block">
+      <h1>Despacho Matinal</h1>
+      <p id="dateLine">carregando data…</p>
+    </div>
+    <button id="btnSettings" aria-label="Abrir configurações" title="Configurações">⚙</button>
+  </header>
+
+  <div class="status" id="statusStrip">
+    <span class="dot"></span>
+    <span id="statusText">Impressora desconectada</span>
+  </div>
+
+  <div class="msg" id="msgBox" role="alert"></div>
+
+  <section class="panel" id="settingsPanel" aria-label="Configurações">
+    <h2>Configurações</h2>
+
+    <div class="field">
+      <label for="inputName">Seu nome (para a saudação)</label>
+      <input type="text" id="inputName" placeholder="Ex.: Marina" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="inputCity">Cidade para o clima</label>
+      <div class="field-row">
+        <input type="text" id="inputCity" placeholder="Ex.: Curitiba, BR" autocomplete="off">
+        <button class="btn-inline" id="btnGeo" type="button">📍 Usar local</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="selectCategory">Notícias</label>
+      <div class="chips" id="categoryChips">
+        <button class="chip active" data-cat="geral" type="button">Geral</button>
+        <button class="chip" data-cat="tecnologia" type="button">Tecnologia</button>
+        <button class="chip" data-cat="economia" type="button">Economia</button>
+        <button class="chip" data-cat="esportes" type="button">Esportes</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="selectWidth">Largura do papel</label>
+      <select id="selectWidth">
+        <option value="32">58 mm (32 colunas)</option>
+        <option value="48">80 mm (48 colunas)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="toggle">
+        <input type="checkbox" id="toggleAccents" checked>
+        Remover acentos ao imprimir (recomendado — evita caracteres estranhos em impressoras que não suportam UTF-8)
+      </label>
+    </div>
+
+    <div class="field">
+      <label class="toggle">
+        <input type="checkbox" id="toggleCut">
+        Cortar papel automaticamente ao final (apenas se sua impressora tiver guilhotina)
+      </label>
+    </div>
+  </section>
+
+  <div class="controls">
+    <button class="action secondary" id="btnConnect" type="button">Conectar impressora</button>
+    <button class="action secondary" id="btnRefresh" type="button">Atualizar conteúdo</button>
+    <button class="action accent" id="btnPrint" type="button" disabled>Imprimir despacho</button>
+  </div>
+
+  <div class="preview-wrap">
+    <div class="receipt" id="receipt">
+      <div class="r-empty">Toque em "Atualizar conteúdo" para buscar o clima e as notícias de hoje.</div>
     </div>
   </div>
 
-  <div id="main">
-    <div id="backdrop"></div>
+  <footer>
+    Conexão via Web Bluetooth (protocolo ESC/POS) · funciona no Chrome/Edge para Android e desktop. Não é compatível com Safari/iOS.
+  </footer>
 
-    <div id="panel">
-      <div id="drawer-handle"></div>
-      <div class="panel-scroll">
-
-        <div class="sec">
-          <div class="sec-label">Usuário</div>
-          <div class="row">
-            <div id="user-badge">—</div>
-            <select id="user-select" style="flex:1;"></select>
-            <button class="btn-icon" id="new-user-btn" title="Novo usuário">＋</button>
-          </div>
-          <div class="row" style="margin-top:10px;">
-            <button class="btn btn-outline" id="reset-btn" style="flex:1;">Reiniciar progresso</button>
-            <button class="btn-icon" id="export-btn" title="Exportar">⭳</button>
-            <button class="btn-icon" id="import-btn" title="Importar">⭱</button>
-            <input type="file" id="import-file" accept="application/json" style="display:none;">
-          </div>
-        </div>
-
-        <div class="sec">
-          <div class="sec-label">Buscar endereço</div>
-          <div class="row">
-            <input type="text" id="search-input" placeholder="Digite um endereço…">
-            <button class="btn btn-primary" id="search-btn">Ir</button>
-          </div>
-        </div>
-
-        <div class="sec">
-          <div class="sec-label">Exploração em campo</div>
-          <button class="btn btn-teal btn-block" id="exploration-toggle">▶ Iniciar exploração (GPS)</button>
-          <div class="hint">Sua localização real revela o mapa conforme você se desloca. Chegar perto de um local pendente conclui a diligência automaticamente.</div>
-        </div>
-
-        <div id="tabs">
-          <div class="tab active" data-tab="pending">Pendentes <span class="count" id="count-pending">0</span></div>
-          <div class="tab" data-tab="done">Concluídas <span class="count" id="count-done">0</span></div>
-        </div>
-        <div id="list-wrap"></div>
-      </div>
-    </div>
-
-    <div id="map-wrap">
-      <div id="map"></div>
-      <canvas id="fog-canvas"></canvas>
-
-      <div id="status-chip"><div class="pulse"></div><span>Explorando…</span></div>
-
-      <div id="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--amber);"></div>Pendente</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--teal);"></div>Concluída</div>
-      </div>
-
-      <button id="fab-add" title="Adicionar local">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      </button>
-
-      <div id="new-loc-card">
-        <h3>Nova diligência</h3>
-        <label>Nome do local</label>
-        <input type="text" id="nl-name" placeholder="Ex: Imóvel Rua das Flores, 123">
-        <label>Endereço</label>
-        <input type="text" id="nl-address">
-        <label>Observações</label>
-        <textarea id="nl-notes" placeholder="Notas internas, contato, referência…"></textarea>
-        <div class="actions">
-          <button class="btn btn-outline" id="nl-cancel" style="flex:1;">Cancelar</button>
-          <button class="btn btn-primary" id="nl-save" style="flex:1;">Salvar</button>
-        </div>
-      </div>
-
-      <div id="toast-container"></div>
-    </div>
-  </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-/* ======================================================================
-   PERSISTÊNCIA (localStorage — por navegador/dispositivo, por usuário)
-   ====================================================================== */
-const STORE_USERS_KEY = "diligencias_users_v2";
-const STORE_CURRENT_KEY = "diligencias_current_user_v2";
-const STORE_DATA_PREFIX = "diligencias_data_v2_";
+(function(){
+  "use strict";
 
-function getUsers(){ try{ return JSON.parse(localStorage.getItem(STORE_USERS_KEY)) || []; }catch(e){ return []; } }
-function saveUsers(list){ localStorage.setItem(STORE_USERS_KEY, JSON.stringify(list)); }
-function getCurrentUserName(){ return localStorage.getItem(STORE_CURRENT_KEY) || null; }
-function setCurrentUserName(name){ localStorage.setItem(STORE_CURRENT_KEY, name); }
-function defaultState(){ return { locations: [], explored: [] }; }
-function loadState(user){
-  try{ const raw = localStorage.getItem(STORE_DATA_PREFIX + user); return raw ? JSON.parse(raw) : defaultState(); }
-  catch(e){ return defaultState(); }
-}
-function saveState(user, state){ localStorage.setItem(STORE_DATA_PREFIX + user, JSON.stringify(state)); }
+  /* =========================================================
+     ESTADO (mantido apenas em memória, nunca salvo em disco)
+     ========================================================= */
+  const state = {
+    userName: "",
+    city: "",
+    coords: null,        // {lat, lon, label}
+    category: "geral",
+    paperWidth: 32,
+    removeAccents: true,
+    cutPaper: false,
+    weather: null,
+    news: null,
+    lastFetchedAt: null,
+    device: null,
+    characteristic: null
+  };
 
-let state = defaultState();
-let currentUser = null;
+  const NEWS_FEEDS = {
+    geral:      "https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-BR",
+    tecnologia: "https://news.google.com/rss/search?q=tecnologia&hl=pt-BR&gl=BR&ceid=BR:pt-BR",
+    economia:   "https://news.google.com/rss/search?q=economia&hl=pt-BR&gl=BR&ceid=BR:pt-BR",
+    esportes:   "https://news.google.com/rss/search?q=esportes&hl=pt-BR&gl=BR&ceid=BR:pt-BR"
+  };
 
-/* ======================================================================
-   MAPA (Leaflet + tiles CARTO Positron — sem chave de API)
-   ====================================================================== */
-let map, fogCanvas, fogCtx;
-let markers = {};
-let watchId = null;
-let userPosMarker = null;
-let addModeActive = false;
-let pendingClickLatLng = null;
+  const WEATHER_CODES = {
+    0:"Céu limpo", 1:"Poucas nuvens", 2:"Parcialmente nublado", 3:"Nublado",
+    45:"Neblina", 48:"Neblina com geada",
+    51:"Garoa fraca", 53:"Garoa", 55:"Garoa forte",
+    56:"Garoa congelante", 57:"Garoa congelante forte",
+    61:"Chuva fraca", 63:"Chuva", 65:"Chuva forte",
+    66:"Chuva congelante", 67:"Chuva congelante forte",
+    71:"Neve fraca", 73:"Neve", 75:"Neve forte", 77:"Grãos de neve",
+    80:"Pancadas de chuva fracas", 81:"Pancadas de chuva", 82:"Pancadas de chuva fortes",
+    85:"Pancadas de neve fracas", 86:"Pancadas de neve fortes",
+    95:"Trovoadas", 96:"Trovoadas com granizo", 99:"Trovoadas com granizo forte"
+  };
 
-const REVEAL_RADIUS_LOCATION = 160;
-const REVEAL_RADIUS_TRAIL = 55;
-const MIN_TRAIL_STEP = 22;
-const ARRIVAL_RADIUS = 55;
+  /* =========================================================
+     ELEMENTOS
+     ========================================================= */
+  const el = {
+    dateLine: document.getElementById("dateLine"),
+    statusStrip: document.getElementById("statusStrip"),
+    statusText: document.getElementById("statusText"),
+    msgBox: document.getElementById("msgBox"),
+    btnSettings: document.getElementById("btnSettings"),
+    settingsPanel: document.getElementById("settingsPanel"),
+    inputName: document.getElementById("inputName"),
+    inputCity: document.getElementById("inputCity"),
+    btnGeo: document.getElementById("btnGeo"),
+    categoryChips: document.getElementById("categoryChips"),
+    selectWidth: document.getElementById("selectWidth"),
+    toggleAccents: document.getElementById("toggleAccents"),
+    toggleCut: document.getElementById("toggleCut"),
+    btnConnect: document.getElementById("btnConnect"),
+    btnRefresh: document.getElementById("btnRefresh"),
+    btnPrint: document.getElementById("btnPrint"),
+    receipt: document.getElementById("receipt")
+  };
 
-function initApp(){
-  map = L.map('map', { zoomControl:false, attributionControl:true }).setView([-14.235,-51.9253], 4.2);
-  L.control.zoom({ position:'bottomleft' }).addTo(map);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap contributors © CARTO'
-  }).addTo(map);
-
-  fogCanvas = document.getElementById('fog-canvas');
-  fogCtx = fogCanvas.getContext('2d');
-
-  map.on('move zoom resize', scheduleFogRedraw);
-  window.addEventListener('resize', scheduleFogRedraw);
-
-  map.on('click', (e)=>{
-    if(!addModeActive) return;
-    openNewLocForm(e.latlng, e.originalEvent);
-  });
-
-  initUsersUI();
-  bindUI();
-  scheduleFogRedraw();
-}
-
-let fogRAF = null;
-function scheduleFogRedraw(){
-  if(fogRAF) cancelAnimationFrame(fogRAF);
-  fogRAF = requestAnimationFrame(drawFog);
-}
-
-function metersPerPixelAt(lat, zoom){
-  return 156543.03392 * Math.cos(lat * Math.PI/180) / Math.pow(2, zoom);
-}
-
-function drawFog(){
-  if(!map) return;
-  const wrap = document.getElementById('map-wrap');
-  const w = wrap.clientWidth, h = wrap.clientHeight;
-  if(fogCanvas.width !== w || fogCanvas.height !== h){ fogCanvas.width = w; fogCanvas.height = h; }
-
-  fogCtx.globalCompositeOperation = 'source-over';
-  fogCtx.clearRect(0,0,w,h);
-  fogCtx.fillStyle = 'rgba(17,18,22,0.90)';
-  fogCtx.fillRect(0,0,w,h);
-
-  const zoom = map.getZoom();
-
-  function toXY(lat,lng){ const p = map.latLngToContainerPoint([lat,lng]); return {x:p.x, y:p.y}; }
-  function cutHole(lat,lng,radiusMeters){
-    const {x,y} = toXY(lat,lng);
-    const mpp = metersPerPixelAt(lat, zoom);
-    const r = radiusMeters / mpp;
-    if(r < 2) return;
-    fogCtx.globalCompositeOperation = 'destination-out';
-    const grad = fogCtx.createRadialGradient(x,y,r*0.55,x,y,r);
-    grad.addColorStop(0,'rgba(0,0,0,1)');
-    grad.addColorStop(1,'rgba(0,0,0,0)');
-    fogCtx.fillStyle = grad;
-    fogCtx.beginPath(); fogCtx.arc(x,y,r,0,Math.PI*2); fogCtx.fill();
-    return {x,y,r};
+  /* =========================================================
+     UTIL: mensagens, data/hora
+     ========================================================= */
+  function showMsg(text, type){
+    el.msgBox.textContent = text;
+    el.msgBox.className = "msg show" + (type === "info" ? " info" : "");
+  }
+  function hideMsg(){
+    el.msgBox.className = "msg";
   }
 
-  state.explored.forEach(p => cutHole(p.lat,p.lng, REVEAL_RADIUS_TRAIL));
+  function updateDateLine(){
+    const now = new Date();
+    const formatted = now.toLocaleDateString("pt-BR", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric"
+    });
+    el.dateLine.textContent = formatted;
+  }
 
-  state.locations.filter(l=>l.status==='done').forEach(l=>{
-    const res = cutHole(l.lat,l.lng, REVEAL_RADIUS_LOCATION);
-    if(res){
-      fogCtx.globalCompositeOperation = 'source-over';
-      fogCtx.strokeStyle = 'rgba(31,143,111,0.5)';
-      fogCtx.lineWidth = 2;
-      fogCtx.beginPath(); fogCtx.arc(res.x,res.y,res.r,0,Math.PI*2); fogCtx.stroke();
+  function greetingForHour(hour){
+    if(hour < 12) return "Bom dia";
+    if(hour < 18) return "Boa tarde";
+    return "Boa noite";
+  }
+
+  function removerAcentos(str){
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  /* =========================================================
+     BUSCA: CLIMA (Open-Meteo — sem necessidade de chave de API)
+     ========================================================= */
+  async function geocodeCity(cityName){
+    const url = "https://geocoding-api.open-meteo.com/v1/search?name=" +
+      encodeURIComponent(cityName) + "&count=1&language=pt&format=json";
+    const res = await fetch(url);
+    if(!res.ok) throw new Error("Não foi possível buscar a cidade.");
+    const data = await res.json();
+    if(!data.results || !data.results.length) throw new Error("Cidade não encontrada. Tente outro nome.");
+    const r = data.results[0];
+    return { lat: r.latitude, lon: r.longitude, label: [r.name, r.admin1, r.country].filter(Boolean).join(", ") };
+  }
+
+  async function fetchWeather(lat, lon){
+    const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+      "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m" +
+      "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
+      "&timezone=auto";
+    const res = await fetch(url);
+    if(!res.ok) throw new Error("Não foi possível obter a previsão do tempo.");
+    return res.json();
+  }
+
+  async function loadWeather(){
+    let coords = state.coords;
+    if(!coords){
+      if(!state.city) throw new Error("Informe uma cidade nas configurações (ou use sua localização).");
+      coords = await geocodeCity(state.city);
+      state.coords = coords;
     }
-  });
-
-  fogCtx.globalCompositeOperation = 'source-over';
-  state.locations.filter(l=>l.status==='pending').forEach(l=>{
-    const {x,y} = toXY(l.lat,l.lng);
-    if(x < -20 || y < -20 || x > w+20 || y > h+20) return;
-    fogCtx.beginPath(); fogCtx.arc(x,y,7,0,Math.PI*2);
-    fogCtx.fillStyle = 'rgba(217,138,43,0.95)'; fogCtx.fill();
-    fogCtx.lineWidth = 2; fogCtx.strokeStyle = 'rgba(255,255,255,0.9)'; fogCtx.stroke();
-    fogCtx.beginPath(); fogCtx.arc(x,y,13,0,Math.PI*2);
-    fogCtx.strokeStyle = 'rgba(217,138,43,0.4)'; fogCtx.lineWidth = 1.5; fogCtx.stroke();
-  });
-}
-
-/* ======================================================================
-   MARCADORES
-   ====================================================================== */
-function renderMarkers(){
-  Object.values(markers).forEach(m => map.removeLayer(m));
-  markers = {};
-  state.locations.forEach(loc=>{
-    const marker = L.circleMarker([loc.lat, loc.lng], {
-      radius: 8,
-      fillColor: loc.status === 'done' ? '#1f8f6f' : '#d98a2b',
-      color: '#fff', weight: 2, fillOpacity: 1
-    }).addTo(map);
-    marker.bindPopup(buildPopupContent(loc), { closeButton:true, minWidth:220 });
-    marker.on('popupopen', ()=> bindPopupButtons(loc.id));
-    markers[loc.id] = marker;
-  });
-  scheduleFogRedraw();
-}
-
-function buildPopupContent(loc){
-  const statusLabel = loc.status === 'done' ? '✅ Concluída' : '🕘 Pendente';
-  const doneInfo = loc.doneAt ? `<div style="font-size:11px;color:#84858c;margin-top:4px;">Concluída em ${new Date(loc.doneAt).toLocaleString('pt-BR')}</div>` : '';
-  return `
-    <div style="font-family:'Inter',sans-serif;max-width:210px;">
-      <div style="font-weight:700;font-size:13.5px;margin-bottom:2px;">${escapeHtml(loc.name)}</div>
-      <div style="font-size:11.5px;color:#84858c;">${escapeHtml(loc.address||'')}</div>
-      <div style="font-size:12px;margin-top:6px;">${statusLabel}</div>
-      ${doneInfo}
-      ${loc.notes ? `<div style="font-size:11.5px;margin-top:6px;border-top:1px solid #eee;padding-top:6px;">${escapeHtml(loc.notes)}</div>` : ''}
-      <div style="margin-top:10px;display:flex;gap:6px;">
-        <button data-action="toggle" data-id="${loc.id}" style="flex:1;padding:6px 8px;border:none;border-radius:7px;cursor:pointer;background:${loc.status==='done' ? '#d98a2b' : '#1f8f6f'};color:#fff;font-size:11.5px;font-weight:600;">
-          ${loc.status === 'done' ? 'Reabrir' : 'Concluir'}
-        </button>
-        <button data-action="delete" data-id="${loc.id}" style="padding:6px 8px;border:1px solid #d54848;background:transparent;color:#d54848;border-radius:7px;cursor:pointer;font-size:11.5px;font-weight:600;">Excluir</button>
-      </div>
-    </div>`;
-}
-function bindPopupButtons(id){
-  document.querySelectorAll(`[data-id="${id}"]`).forEach(btn=>{
-    btn.onclick = ()=>{
-      if(btn.dataset.action === 'toggle') toggleStatus(id);
-      else if(btn.dataset.action === 'delete'){ if(confirm('Excluir esta diligência do mapa?')) deleteLocation(id); }
-      map.closePopup();
+    const data = await fetchWeather(coords.lat, coords.lon);
+    const desc = WEATHER_CODES[data.current.weather_code] || "Condição desconhecida";
+    return {
+      label: coords.label,
+      tempNow: Math.round(data.current.temperature_2m),
+      humidity: Math.round(data.current.relative_humidity_2m),
+      wind: Math.round(data.current.wind_speed_10m),
+      desc: desc,
+      tempMax: Math.round(data.daily.temperature_2m_max[0]),
+      tempMin: Math.round(data.daily.temperature_2m_min[0]),
+      rainChance: data.daily.precipitation_probability_max ? data.daily.precipitation_probability_max[0] : null
     };
-  });
-}
-function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-/* ======================================================================
-   AÇÕES SOBRE LOCAIS
-   ====================================================================== */
-function toggleStatus(id){
-  const loc = state.locations.find(l=>l.id===id); if(!loc) return;
-  loc.status = loc.status === 'done' ? 'pending' : 'done';
-  loc.doneAt = loc.status === 'done' ? Date.now() : null;
-  persist(); renderMarkers(); renderList(); renderProgress();
-  toast(loc.status==='done' ? `Diligência concluída: ${loc.name}` : `Diligência reaberta: ${loc.name}`);
-}
-function deleteLocation(id){
-  state.locations = state.locations.filter(l=>l.id!==id);
-  persist(); renderMarkers(); renderList(); renderProgress();
-}
-function addLocation({name, address, lat, lng, notes}){
-  state.locations.push({
-    id: 'loc_' + Date.now() + '_' + Math.floor(Math.random()*1000),
-    name: name || 'Local sem nome', address: address || '',
-    lat, lng, notes: notes || '', status: 'pending', doneAt: null
-  });
-  persist(); renderMarkers(); renderList(); renderProgress();
-}
-
-/* ======================================================================
-   NOVO LOCAL (Nominatim para geocodificação — gratuito, sem chave)
-   ====================================================================== */
-function openNewLocForm(latlng){
-  pendingClickLatLng = latlng;
-  const card = document.getElementById('new-loc-card');
-  card.style.display = 'block';
-  document.getElementById('nl-name').value = '';
-  document.getElementById('nl-notes').value = '';
-  document.getElementById('nl-address').value = 'Buscando endereço…';
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}`)
-    .then(r=>r.json())
-    .then(d=>{ document.getElementById('nl-address').value = d.display_name || 'Endereço não encontrado'; })
-    .catch(()=>{ document.getElementById('nl-address').value = 'Endereço não encontrado'; });
-  document.getElementById('nl-name').focus();
-}
-function closeNewLocForm(){
-  document.getElementById('new-loc-card').style.display = 'none';
-  pendingClickLatLng = null;
-}
-
-/* ======================================================================
-   LISTA LATERAL / ABAS
-   ====================================================================== */
-let activeTab = 'pending';
-function renderList(){
-  const wrap = document.getElementById('list-wrap');
-  wrap.innerHTML = '';
-  const items = state.locations.filter(l => activeTab === 'pending' ? l.status==='pending' : l.status==='done');
-  document.getElementById('count-pending').textContent = state.locations.filter(l=>l.status==='pending').length;
-  document.getElementById('count-done').textContent = state.locations.filter(l=>l.status==='done').length;
-
-  if(items.length === 0){
-    wrap.innerHTML = `<div class="empty-msg">${activeTab==='pending' ? 'Nenhuma diligência pendente.<br>Toque no botão “+” e depois no mapa para cadastrar um local.' : 'Nenhuma diligência concluída ainda.'}</div>`;
-    return;
-  }
-  items.sort((a,b)=> (b.doneAt||0) - (a.doneAt||0));
-  items.forEach(loc=>{
-    const card = document.createElement('div');
-    card.className = 'loc-card';
-    card.innerHTML = `
-      <div class="row1">
-        <div>
-          <div class="name">${escapeHtml(loc.name)}</div>
-          <div class="addr">${escapeHtml(loc.address||'')}</div>
-        </div>
-        <div class="dot ${loc.status}"></div>
-      </div>
-      <div class="meta">${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}${loc.doneAt ? ' · ' + new Date(loc.doneAt).toLocaleDateString('pt-BR') : ''}</div>
-    `;
-    card.onclick = ()=>{
-      map.setView([loc.lat, loc.lng], Math.max(map.getZoom(), 15));
-      markers[loc.id].openPopup();
-      closePanel();
-    };
-    wrap.appendChild(card);
-  });
-}
-document.querySelectorAll('.tab').forEach(tab=>{
-  tab.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    tab.classList.add('active'); activeTab = tab.dataset.tab; renderList();
-  });
-});
-
-/* ======================================================================
-   PROGRESSO
-   ====================================================================== */
-function renderProgress(){
-  const total = state.locations.length;
-  const done = state.locations.filter(l=>l.status==='done').length;
-  const pct = total === 0 ? 0 : Math.round((done/total)*100);
-  document.getElementById('progress-pct').textContent = pct + '%';
-  document.getElementById('progress-ring-fill').style.width = pct + '%';
-}
-
-/* ======================================================================
-   USUÁRIOS
-   ====================================================================== */
-function initUsersUI(){
-  let users = getUsers();
-  if(users.length === 0){ users = ['Padrão']; saveUsers(users); }
-  let current = getCurrentUserName();
-  if(!current || !users.includes(current)){ current = users[0]; setCurrentUserName(current); }
-  populateUserSelect(users, current);
-  switchUser(current, true);
-}
-function populateUserSelect(users, current){
-  const sel = document.getElementById('user-select');
-  sel.innerHTML = '';
-  users.forEach(u=>{
-    const opt = document.createElement('option');
-    opt.value = u; opt.textContent = u; if(u === current) opt.selected = true;
-    sel.appendChild(opt);
-  });
-}
-function switchUser(name, silent){
-  currentUser = name; setCurrentUserName(name); state = loadState(name);
-  document.getElementById('user-badge').textContent = name;
-  renderMarkers(); renderList(); renderProgress();
-  if(!silent) toast(`Usuário alterado para: ${name}`);
-}
-function persist(){ if(currentUser) saveState(currentUser, state); }
-
-/* ======================================================================
-   EXPLORAÇÃO POR GPS
-   ====================================================================== */
-function toggleExploration(){
-  const btn = document.getElementById('exploration-toggle');
-  const chip = document.getElementById('status-chip');
-  if(watchId === null){
-    if(!navigator.geolocation){ toast('Geolocalização não disponível neste navegador.'); return; }
-    watchId = navigator.geolocation.watchPosition(onPosition, onPositionError, { enableHighAccuracy:true, maximumAge:5000, timeout:15000 });
-    btn.textContent = '⏸ Parar exploração'; btn.classList.add('on'); chip.classList.add('show');
-    toast('Exploração iniciada. Desloque-se para revelar o mapa.');
-  } else {
-    navigator.geolocation.clearWatch(watchId); watchId = null;
-    btn.textContent = '▶ Iniciar exploração (GPS)'; btn.classList.remove('on'); chip.classList.remove('show');
-    toast('Exploração pausada.');
-  }
-}
-function onPositionError(err){ toast('Não foi possível obter sua localização: ' + err.message); }
-function onPosition(pos){
-  const lat = pos.coords.latitude, lng = pos.coords.longitude;
-  if(!userPosMarker){
-    userPosMarker = L.circleMarker([lat,lng], { radius:7, fillColor:'#4a90e2', fillOpacity:1, color:'#fff', weight:2 }).addTo(map);
-    map.setView([lat,lng], 16);
-  } else { userPosMarker.setLatLng([lat,lng]); }
-
-  const last = state.explored[state.explored.length-1];
-  if(!last || map.distance([last.lat,last.lng],[lat,lng]) > MIN_TRAIL_STEP){
-    state.explored.push({lat,lng});
-    if(state.explored.length > 3000) state.explored.shift();
-    persist();
   }
 
-  state.locations.filter(l=>l.status==='pending').forEach(l=>{
-    if(map.distance([l.lat,l.lng],[lat,lng]) <= ARRIVAL_RADIUS){
-      l.status = 'done'; l.doneAt = Date.now();
-      toast(`✅ Diligência concluída automaticamente: ${l.name}`);
-      persist(); renderMarkers(); renderList(); renderProgress();
+  /* =========================================================
+     BUSCA: NOTÍCIAS (RSS via proxy público, sem necessidade de chave)
+     ========================================================= */
+  async function loadNews(){
+    const feedUrl = NEWS_FEEDS[state.category] || NEWS_FEEDS.geral;
+    const proxied = "https://api.allorigins.win/raw?url=" + encodeURIComponent(feedUrl);
+    const res = await fetch(proxied);
+    if(!res.ok) throw new Error("Não foi possível obter as notícias.");
+    const text = await res.text();
+    const xml = new DOMParser().parseFromString(text, "text/xml");
+    if(xml.querySelector("parsererror")) throw new Error("Formato de notícias inválido.");
+    const items = Array.from(xml.querySelectorAll("item")).slice(0, 6);
+    if(!items.length) throw new Error("Nenhuma notícia encontrada agora.");
+    return items.map(function(it){
+      const raw = (it.querySelector("title") && it.querySelector("title").textContent) || "";
+      return raw.trim();
+    }).filter(Boolean);
+  }
+
+  /* =========================================================
+     CONSTRUÇÃO DO CONTEÚDO (linhas lógicas, usadas tanto na
+     pré-visualização quanto na impressão ESC/POS)
+     ========================================================= */
+  function buildLines(){
+    const lines = [];
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+
+    lines.push({ type:"header", text:"DESPACHO MATINAL" });
+    lines.push({ type:"sub", text: now.toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long" }) });
+    if(state.userName){
+      lines.push({ type:"sub", text: greetingForHour(now.getHours()) + ", " + state.userName + "!" });
     }
-  });
-  scheduleFogRedraw();
-}
+    lines.push({ type:"divider" });
 
-/* ======================================================================
-   TOASTS
-   ====================================================================== */
-function toast(msg){
-  const c = document.getElementById('toast-container');
-  const el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
-  c.appendChild(el); setTimeout(()=> el.remove(), 4200);
-}
+    lines.push({ type:"section", text:"CLIMA" });
+    if(state.weather){
+      const w = state.weather;
+      lines.push({ type:"item", text: w.label });
+      lines.push({ type:"item", text: "Agora: " + w.tempNow + "\u00B0C, " + w.desc });
+      lines.push({ type:"item", text: "Maxima " + w.tempMax + "\u00B0C / Minima " + w.tempMin + "\u00B0C" });
+      lines.push({ type:"item", text: "Umidade " + w.humidity + "% / Vento " + w.wind + " km/h" });
+      if(w.rainChance !== null){
+        lines.push({ type:"item", text: "Chance de chuva: " + w.rainChance + "%" });
+      }
+    } else {
+      lines.push({ type:"item", text:"Dados do clima ainda nao carregados." });
+    }
+    lines.push({ type:"divider" });
 
-/* ======================================================================
-   PAINEL (drawer mobile / sidebar desktop)
-   ====================================================================== */
-function openPanel(){ document.getElementById('panel').classList.add('open'); document.getElementById('backdrop').classList.add('show'); }
-function closePanel(){ document.getElementById('panel').classList.remove('open'); document.getElementById('backdrop').classList.remove('show'); }
+    lines.push({ type:"section", text:"PRINCIPAIS NOTICIAS" });
+    if(state.news && state.news.length){
+      state.news.forEach(function(title, i){
+        lines.push({ type:"news", index: i + 1, text: title });
+      });
+    } else {
+      lines.push({ type:"item", text:"Nenhuma noticia carregada." });
+    }
+    lines.push({ type:"divider" });
+    lines.push({ type:"sub", text:"Impresso as " + timeStr });
+    lines.push({ type:"spacer" });
 
-/* ======================================================================
-   LIGAÇÃO DA UI
-   ====================================================================== */
-function bindUI(){
-  document.getElementById('hamburger-btn').addEventListener('click', ()=>{
-    document.getElementById('panel').classList.contains('open') ? closePanel() : openPanel();
-  });
-  document.getElementById('backdrop').addEventListener('click', closePanel);
-
-  document.getElementById('user-select').addEventListener('change', (e)=> switchUser(e.target.value));
-
-  document.getElementById('new-user-btn').addEventListener('click', ()=>{
-    const name = prompt('Nome do novo usuário (ex: nome do agente de campo):');
-    if(!name) return;
-    const trimmed = name.trim(); if(!trimmed) return;
-    let users = getUsers();
-    if(!users.includes(trimmed)) users.push(trimmed);
-    saveUsers(users); populateUserSelect(users, trimmed); switchUser(trimmed);
-  });
-
-  document.getElementById('reset-btn').addEventListener('click', ()=>{
-    if(!confirm(`Reiniciar todo o progresso do usuário "${currentUser}"?\n\nTodas as diligências voltarão a "pendente" e a área explorada será apagada. Os locais cadastrados NÃO serão excluídos.`)) return;
-    state.explored = [];
-    state.locations.forEach(l=>{ l.status='pending'; l.doneAt=null; });
-    persist(); renderMarkers(); renderList(); renderProgress();
-    toast('Progresso reiniciado.');
-  });
-
-  document.getElementById('export-btn').addEventListener('click', ()=>{
-    const blob = new Blob([JSON.stringify({user:currentUser, state}, null, 2)], {type:'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `diligencias_${currentUser}.json`; a.click();
-    URL.revokeObjectURL(url);
-  });
-  document.getElementById('import-btn').addEventListener('click', ()=> document.getElementById('import-file').click());
-  document.getElementById('import-file').addEventListener('change', (e)=>{
-    const file = e.target.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = ()=>{
-      try{
-        const data = JSON.parse(reader.result);
-        if(data.state && data.state.locations){
-          state = data.state; persist(); renderMarkers(); renderList(); renderProgress();
-          toast('Dados importados com sucesso.');
-        } else toast('Arquivo inválido.');
-      }catch(err){ toast('Erro ao importar arquivo.'); }
-    };
-    reader.readAsText(file);
-  });
-
-  document.getElementById('fab-add').addEventListener('click', (e)=>{
-    addModeActive = !addModeActive;
-    e.currentTarget.classList.toggle('active', addModeActive);
-    toast(addModeActive ? 'Toque em um ponto do mapa para cadastrar o local.' : 'Modo de adição cancelado.');
-  });
-
-  document.getElementById('search-btn').addEventListener('click', doSearch);
-  document.getElementById('search-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doSearch(); });
-  function doSearch(){
-    const q = document.getElementById('search-input').value.trim();
-    if(!q) return;
-    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`)
-      .then(r=>r.json())
-      .then(results=>{
-        if(results && results[0]){
-          map.setView([parseFloat(results[0].lat), parseFloat(results[0].lon)], 15);
-          closePanel();
-        } else toast('Endereço não encontrado.');
-      })
-      .catch(()=> toast('Erro ao buscar endereço.'));
+    return lines;
   }
 
-  document.getElementById('nl-cancel').addEventListener('click', ()=>{ closeNewLocForm(); addModeActive=false; document.getElementById('fab-add').classList.remove('active'); });
-  document.getElementById('nl-save').addEventListener('click', ()=>{
-    if(!pendingClickLatLng) return;
-    const name = document.getElementById('nl-name').value.trim();
-    const address = document.getElementById('nl-address').value.trim();
-    const notes = document.getElementById('nl-notes').value.trim();
-    addLocation({ name: name || 'Local sem nome', address, notes, lat: pendingClickLatLng.lat, lng: pendingClickLatLng.lng });
-    closeNewLocForm();
-    addModeActive = false; document.getElementById('fab-add').classList.remove('active');
-    toast('Diligência adicionada.');
+  /* =========================================================
+     PRÉ-VISUALIZAÇÃO (HTML)
+     ========================================================= */
+  function renderPreview(){
+    document.documentElement.style.setProperty("--paper-ch", state.paperWidth);
+    const lines = buildLines();
+    const frag = document.createDocumentFragment();
+
+    lines.forEach(function(line){
+      const div = document.createElement("div");
+      div.className = "r-line";
+      if(line.type === "header"){
+        div.classList.add("r-header");
+        div.textContent = line.text;
+      } else if(line.type === "sub"){
+        div.classList.add("r-sub");
+        div.textContent = line.text;
+      } else if(line.type === "section"){
+        div.classList.add("r-section");
+        div.textContent = line.text;
+      } else if(line.type === "item"){
+        div.classList.add("r-item");
+        div.textContent = line.text;
+      } else if(line.type === "news"){
+        div.classList.add("r-news");
+        div.textContent = line.index + ". " + line.text;
+      } else if(line.type === "divider"){
+        div.classList.add("r-divider");
+        div.textContent = "\u2500".repeat(Math.min(state.paperWidth, 48));
+      } else if(line.type === "spacer"){
+        div.classList.add("r-spacer");
+      }
+      frag.appendChild(div);
+    });
+
+    el.receipt.innerHTML = "";
+    el.receipt.appendChild(frag);
+  }
+
+  /* =========================================================
+     ESC/POS: geração de bytes
+     ========================================================= */
+  const ESC = 0x1B, GS = 0x1D;
+  function bytesInit(){ return [ESC, 0x40]; }
+  function bytesAlign(n){ return [ESC, 0x61, n]; }        // 0 esquerda, 1 centro
+  function bytesBold(on){ return [ESC, 0x45, on ? 1 : 0]; }
+  function bytesDouble(on){ return [GS, 0x21, on ? 0x11 : 0x00]; }
+  function bytesFeed(n){ return [ESC, 0x64, n]; }
+  function bytesCut(){ return [GS, 0x56, 0x01]; }
+
+  function textToBytes(str){
+    const cleaned = state.removeAccents ? removerAcentos(str) : str;
+    return Array.from(new TextEncoder().encode(cleaned + "\n"));
+  }
+
+  function buildEscPos(){
+    const lines = buildLines();
+    let out = [];
+    out = out.concat(bytesInit());
+
+    lines.forEach(function(line){
+      if(line.type === "header"){
+        out = out.concat(bytesAlign(1), bytesBold(true), bytesDouble(true));
+        out = out.concat(textToBytes(line.text));
+        out = out.concat(bytesDouble(false), bytesBold(false), bytesAlign(0));
+      } else if(line.type === "sub"){
+        out = out.concat(bytesAlign(1));
+        out = out.concat(textToBytes(line.text));
+        out = out.concat(bytesAlign(0));
+      } else if(line.type === "section"){
+        out = out.concat(bytesBold(true));
+        out = out.concat(textToBytes(line.text));
+        out = out.concat(bytesBold(false));
+      } else if(line.type === "item"){
+        out = out.concat(textToBytes(line.text));
+      } else if(line.type === "news"){
+        out = out.concat(textToBytes(line.index + ". " + line.text));
+      } else if(line.type === "divider"){
+        out = out.concat(textToBytes("-".repeat(state.paperWidth)));
+      } else if(line.type === "spacer"){
+        out = out.concat(textToBytes(""));
+      }
+    });
+
+    out = out.concat(bytesFeed(3));
+    if(state.cutPaper) out = out.concat(bytesCut());
+    return new Uint8Array(out);
+  }
+
+  /* =========================================================
+     BLUETOOTH (Web Bluetooth API, protocolo ESC/POS)
+     ========================================================= */
+  const KNOWN_SERVICE_UUIDS = [
+    "000018f0-0000-1000-8000-00805f9b34fb",
+    "0000ff00-0000-1000-8000-00805f9b34fb",
+    "49535343-fe7d-4ae5-8fa9-9fafd205e455",
+    "e7810a71-73ae-499d-8c15-faa9aef0c3f2"
+  ];
+
+  async function connectPrinter(){
+    if(!navigator.bluetooth){
+      throw new Error("Este navegador não suporta Web Bluetooth. Use Chrome ou Edge (Android ou desktop).");
+    }
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: KNOWN_SERVICE_UUIDS
+    });
+    const server = await device.gatt.connect();
+    const services = await server.getPrimaryServices();
+
+    let writable = null;
+    for(const service of services){
+      let chars = [];
+      try{ chars = await service.getCharacteristics(); } catch(e){ continue; }
+      for(const ch of chars){
+        if(ch.properties.write || ch.properties.writeWithoutResponse){
+          writable = ch;
+          break;
+        }
+      }
+      if(writable) break;
+    }
+    if(!writable){
+      throw new Error("Impressora conectada, mas nenhuma característica de escrita foi encontrada.");
+    }
+
+    device.addEventListener("gattserverdisconnected", onPrinterDisconnected);
+
+    state.device = device;
+    state.characteristic = writable;
+  }
+
+  function onPrinterDisconnected(){
+    state.device = null;
+    state.characteristic = null;
+    updateStatus();
+  }
+
+  async function sendToPrinter(bytes){
+    if(!state.characteristic) throw new Error("Impressora não conectada.");
+    const chunkSize = 20;
+    for(let i = 0; i < bytes.length; i += chunkSize){
+      const chunk = bytes.slice(i, i + chunkSize);
+      if(state.characteristic.properties.writeWithoutResponse){
+        await state.characteristic.writeValueWithoutResponse(chunk);
+      } else {
+        await state.characteristic.writeValue(chunk);
+      }
+      await new Promise(function(r){ setTimeout(r, 15); });
+    }
+  }
+
+  /* =========================================================
+     STATUS / UI
+     ========================================================= */
+  function updateStatus(){
+    const connected = !!state.characteristic;
+    el.statusStrip.className = "status" + (connected ? " is-ok" : "");
+    el.statusText.textContent = connected
+      ? "Impressora conectada" + (state.device && state.device.name ? " — " + state.device.name : "")
+      : "Impressora desconectada";
+    el.btnConnect.textContent = connected ? "Desconectar impressora" : "Conectar impressora";
+    el.btnPrint.disabled = !connected || !state.weather && !state.news;
+  }
+
+  function setBusy(button, busyLabel){
+    button.dataset.originalLabel = button.textContent;
+    button.textContent = busyLabel;
+    button.disabled = true;
+  }
+  function clearBusy(button){
+    if(button.dataset.originalLabel) button.textContent = button.dataset.originalLabel;
+    button.disabled = false;
+  }
+
+  /* =========================================================
+     AÇÕES
+     ========================================================= */
+  async function handleConnect(){
+    hideMsg();
+    if(state.characteristic){
+      try{ state.device.gatt.disconnect(); } catch(e){}
+      state.device = null;
+      state.characteristic = null;
+      updateStatus();
+      return;
+    }
+    setBusy(el.btnConnect, "Conectando…");
+    try{
+      await connectPrinter();
+      showMsg("Impressora conectada com sucesso.", "info");
+    } catch(err){
+      showMsg(err.message || "Não foi possível conectar à impressora.");
+    } finally {
+      clearBusy(el.btnConnect);
+      updateStatus();
+    }
+  }
+
+  async function handleRefresh(){
+    hideMsg();
+    setBusy(el.btnRefresh, "Atualizando…");
+    const results = await Promise.allSettled([ loadWeather(), loadNews() ]);
+
+    if(results[0].status === "fulfilled"){
+      state.weather = results[0].value;
+    } else {
+      state.weather = null;
+    }
+    if(results[1].status === "fulfilled"){
+      state.news = results[1].value;
+    } else {
+      state.news = null;
+    }
+
+    const errors = results.filter(r => r.status === "rejected").map(r => r.reason.message);
+    if(errors.length){
+      showMsg(errors.join(" "));
+    } else {
+      showMsg("Conteúdo atualizado.", "info");
+    }
+
+    renderPreview();
+    updateStatus();
+    clearBusy(el.btnRefresh);
+  }
+
+  async function handlePrint(){
+    hideMsg();
+    setBusy(el.btnPrint, "Imprimindo…");
+    try{
+      const bytes = buildEscPos();
+      await sendToPrinter(bytes);
+      showMsg("Despacho enviado para a impressora.", "info");
+    } catch(err){
+      showMsg(err.message || "Falha ao imprimir.");
+    } finally {
+      clearBusy(el.btnPrint);
+    }
+  }
+
+  async function handleGeo(){
+    hideMsg();
+    if(!navigator.geolocation){
+      showMsg("Geolocalização não é suportada neste navegador.");
+      return;
+    }
+    setBusy(el.btnGeo, "Localizando…");
+    navigator.geolocation.getCurrentPosition(function(pos){
+      state.coords = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        label: "Sua localização"
+      };
+      state.city = "";
+      el.inputCity.value = "";
+      clearBusy(el.btnGeo);
+      showMsg("Localização definida. Toque em \"Atualizar conteúdo\".", "info");
+    }, function(err){
+      clearBusy(el.btnGeo);
+      showMsg("Não foi possível obter sua localização: " + err.message);
+    }, { timeout: 8000 });
+  }
+
+  /* =========================================================
+     EVENTOS DE CONFIGURAÇÃO
+     ========================================================= */
+  el.btnSettings.addEventListener("click", function(){
+    el.settingsPanel.classList.toggle("open");
   });
 
-  document.getElementById('exploration-toggle').addEventListener('click', toggleExploration);
-}
+  el.inputName.addEventListener("input", function(){
+    state.userName = el.inputName.value.trim();
+    renderPreview();
+  });
 
-initApp();
+  el.inputCity.addEventListener("input", function(){
+    state.city = el.inputCity.value.trim();
+    state.coords = null;
+  });
+
+  el.btnGeo.addEventListener("click", handleGeo);
+
+  el.categoryChips.addEventListener("click", function(e){
+    const chip = e.target.closest(".chip");
+    if(!chip) return;
+    state.category = chip.dataset.cat;
+    Array.from(el.categoryChips.children).forEach(c => c.classList.toggle("active", c === chip));
+  });
+
+  el.selectWidth.addEventListener("change", function(){
+    state.paperWidth = parseInt(el.selectWidth.value, 10);
+    renderPreview();
+  });
+
+  el.toggleAccents.addEventListener("change", function(){
+    state.removeAccents = el.toggleAccents.checked;
+  });
+
+  el.toggleCut.addEventListener("change", function(){
+    state.cutPaper = el.toggleCut.checked;
+  });
+
+  el.btnConnect.addEventListener("click", handleConnect);
+  el.btnRefresh.addEventListener("click", handleRefresh);
+  el.btnPrint.addEventListener("click", handlePrint);
+
+  /* =========================================================
+     INICIALIZAÇÃO
+     ========================================================= */
+  function init(){
+    updateDateLine();
+    setInterval(updateDateLine, 60 * 1000);
+    document.documentElement.style.setProperty("--paper-ch", state.paperWidth);
+    updateStatus();
+    if(!navigator.bluetooth){
+      el.btnConnect.disabled = true;
+      showMsg("Seu navegador não suporta Web Bluetooth. Abra este app no Chrome ou Edge (Android ou computador) para conectar a impressora.");
+    }
+  }
+
+  init();
+})();
 </script>
 </body>
 </html>
