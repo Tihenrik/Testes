@@ -1,1018 +1,411 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Despacho Matinal — Clima &amp; Notícias</title>
-<style>
-  :root{
-    --paper:#F7F3EA;
-    --panel:#EFE8D6;
-    --ink:#221F1B;
-    --ink-soft:#6B6355;
-    --line:#D9CFB8;
-    --accent:#A13D2C;
-    --accent-ink:#F7F3EA;
-    --ok:#3F6B4B;
-    --warn:#A13D2C;
-    --mono: ui-monospace, "SFMono-Regular", "IBM Plex Mono", "Courier New", monospace;
-    --display: Georgia, "Iowan Old Style", "Times New Roman", serif;
-    --radius: 2px;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PrintPro 58mm | Smart Thermal</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-radius: 16px;
+        }
 
-  *{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; }
-  body{
-    background: var(--paper);
-    color: var(--ink);
-    font-family: var(--mono);
-    line-height:1.45;
-    min-height:100vh;
-    padding: clamp(0.75rem, 3vw, 2rem);
-    -webkit-tap-highlight-color: transparent;
-  }
-  *:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
 
-  .app{
-    width:100%;
-    max-width: 30rem;
-    margin: 0 auto;
-  }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-  /* ---------- Header ---------- */
-  header{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:0.75rem;
-    padding-bottom: 0.9rem;
-    border-bottom: 2px solid var(--ink);
-  }
-  .title-block h1{
-    font-family: var(--display);
-    font-size: clamp(1.4rem, 5vw, 1.85rem);
-    font-weight:700;
-    margin:0 0 0.15rem 0;
-    letter-spacing: 0.01em;
-  }
-  .title-block p{
-    margin:0;
-    font-size:0.8rem;
-    color: var(--ink-soft);
-    text-transform: capitalize;
-  }
-  #btnSettings{
-    flex-shrink:0;
-    width:2.4rem;
-    height:2.4rem;
-    border:1px solid var(--ink);
-    background: transparent;
-    color: var(--ink);
-    font-size:1.1rem;
-    cursor:pointer;
-    border-radius: var(--radius);
-  }
-  #btnSettings:hover{ background: var(--panel); }
+        .app-container {
+            background-color: var(--surface-color);
+            width: 100%;
+            max-width: 480px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
 
-  /* ---------- Status strip ---------- */
-  .status{
-    display:flex;
-    align-items:center;
-    gap:0.5rem;
-    font-size:0.82rem;
-    padding: 0.65rem 0;
-    border-bottom: 1px dashed var(--line);
-    color: var(--ink-soft);
-  }
-  .status .dot{
-    width:0.55rem;
-    height:0.55rem;
-    border-radius:50%;
-    background: var(--warn);
-    flex-shrink:0;
-  }
-  .status.is-ok .dot{ background: var(--ok); }
-  .status.is-ok{ color: var(--ok); }
+        .header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+        }
 
-  /* ---------- Buttons row ---------- */
-  .controls{
-    display:flex;
-    flex-wrap:wrap;
-    gap:0.5rem;
-    padding: 0.9rem 0;
-  }
-  button.action{
-    flex:1 1 auto;
-    min-width: 8.5rem;
-    padding: 0.7rem 0.8rem;
-    background: var(--ink);
-    color: var(--paper);
-    border: 1px solid var(--ink);
-    font-family: var(--mono);
-    font-size: 0.85rem;
-    cursor:pointer;
-    border-radius: var(--radius);
-    transition: transform 0.08s ease, opacity 0.15s ease;
-  }
-  button.action.secondary{
-    background: transparent;
-    color: var(--ink);
-  }
-  button.action.accent{
-    background: var(--accent);
-    border-color: var(--accent);
-  }
-  button.action:hover{ opacity:0.85; }
-  button.action:active{ transform: scale(0.98); }
-  button.action:disabled{
-    opacity:0.4;
-    cursor:not-allowed;
-    transform:none;
-  }
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
 
-  /* ---------- Alert / message ---------- */
-  .msg{
-    display:none;
-    font-size:0.82rem;
-    padding:0.6rem 0.75rem;
-    border-left:3px solid var(--accent);
-    background: var(--panel);
-    color: var(--ink);
-    margin-bottom:0.9rem;
-  }
-  .msg.show{ display:block; }
-  .msg.info{ border-left-color: var(--ok); }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-top: 10px;
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--danger-color);
+            transition: all 0.3s ease;
+        }
 
-  /* ---------- Settings panel ---------- */
-  .panel{
-    display:none;
-    background: var(--panel);
-    border:1px solid var(--line);
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border-radius: var(--radius);
-  }
-  .panel.open{ display:block; }
-  .panel h2{
-    font-family: var(--display);
-    font-size:1.05rem;
-    margin: 0 0 0.85rem 0;
-  }
-  .field{ margin-bottom: 0.85rem; }
-  .field:last-child{ margin-bottom:0; }
-  .field label{
-    display:block;
-    font-size:0.75rem;
-    color: var(--ink-soft);
-    margin-bottom:0.3rem;
-  }
-  .field-row{ display:flex; gap:0.5rem; }
-  .field-row > *{ flex:1; }
-  input[type="text"], select{
-    width:100%;
-    padding:0.55rem 0.6rem;
-    font-family: var(--mono);
-    font-size:0.85rem;
-    border:1px solid var(--ink);
-    background: var(--paper);
-    color: var(--ink);
-    border-radius: var(--radius);
-  }
-  .btn-inline{
-    padding:0.55rem 0.7rem;
-    font-family: var(--mono);
-    font-size:0.78rem;
-    border:1px solid var(--ink);
-    background: transparent;
-    color: var(--ink);
-    cursor:pointer;
-    border-radius: var(--radius);
-    white-space:nowrap;
-  }
-  .btn-inline:hover{ background: var(--paper); }
-  .toggle{
-    display:flex;
-    align-items:center;
-    gap:0.5rem;
-    font-size:0.8rem;
-    cursor:pointer;
-  }
-  .toggle input{ width:1rem; height:1rem; accent-color: var(--accent); }
-  .chips{ display:flex; flex-wrap:wrap; gap:0.4rem; }
-  .chip{
-    padding:0.35rem 0.65rem;
-    font-size:0.72rem;
-    border:1px solid var(--ink);
-    background:transparent;
-    color:var(--ink);
-    cursor:pointer;
-    border-radius: 999px;
-  }
-  .chip.active{ background: var(--ink); color: var(--paper); }
+        .status-badge.connected {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
 
-  /* ---------- Receipt preview ---------- */
-  .preview-wrap{
-    display:flex;
-    justify-content:center;
-    padding: 1rem 0 0.5rem 0;
-  }
-  .receipt{
-    width: 100%;
-    max-width: calc(var(--paper-ch, 32) * 1.05ch + 2rem);
-    background: #FFFDF8;
-    border: 1px solid var(--line);
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.02);
-    padding: 1.1rem 1rem;
-    font-family: var(--mono);
-    font-size: 0.78rem;
-    color: var(--ink);
-  }
-  .r-line{
-    width: calc(var(--paper-ch, 32) * 1ch);
-    max-width: 100%;
-    margin: 0 auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
-  .r-header{ text-align:center; font-weight:700; font-size:1.05em; letter-spacing:0.04em; margin-bottom:0.15rem; }
-  .r-sub{ text-align:center; color: var(--ink-soft); margin-bottom:0.15rem; }
-  .r-section{ font-weight:700; margin-top:0.5rem; margin-bottom:0.15rem; }
-  .r-item{ margin-bottom:0.1rem; }
-  .r-news{ margin-bottom:0.35rem; }
-  .r-divider{ text-align:center; color: var(--ink-soft); margin: 0.35rem 0; letter-spacing:0.05em; }
-  .r-spacer{ height:0.6rem; }
-  .r-empty{ text-align:center; color: var(--ink-soft); padding: 1.5rem 0; font-style:italic; }
+        .content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex: 1;
+        }
 
-  footer{
-    padding-top:1rem;
-    font-size:0.72rem;
-    color: var(--ink-soft);
-    text-align:center;
-  }
-  footer a{ color: var(--ink-soft); }
+        .paper-preview {
+            background-color: #fff;
+            color: #000;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            min-height: 200px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+        }
 
-  @media (max-width: 380px){
-    button.action{ min-width: 100%; }
-  }
-</style>
+        .paper-preview::before {
+            content: "57.5mm Papel";
+            position: absolute;
+            top: -20px;
+            left: 0;
+            font-size: 10px;
+            color: var(--text-muted);
+            font-family: sans-serif;
+        }
+
+        textarea {
+            width: 100%;
+            height: 100%;
+            min-height: 180px;
+            border: none;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            background: transparent;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* Atualizado para grade 2x2 */
+            gap: 10px;
+        }
+
+        .btn {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover { background-color: rgba(255, 255, 255, 0.1); }
+        .btn:active { transform: scale(0.96); }
+        .btn i { font-size: 1.2rem; color: var(--text-muted); }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            grid-column: span 2; /* Ocupa as duas colunas */
+            flex-direction: row;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+            padding: 16px;
+        }
+
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-primary:disabled {
+            background-color: #334155;
+            border-color: #334155;
+            color: #64748b;
+            cursor: not-allowed;
+        }
+
+        .btn-primary:disabled i { color: #64748b; }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--surface-color);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            z-index: 1000;
+        }
+
+        .toast.show { transform: translateX(-50%) translateY(0); }
+    </style>
 </head>
 <body>
-<div class="app">
 
-  <header>
-    <div class="title-block">
-      <h1>Despacho Matinal</h1>
-      <p id="dateLine">carregando data…</p>
-    </div>
-    <button id="btnSettings" aria-label="Abrir configurações" title="Configurações">⚙</button>
-  </header>
+    <div class="app-container">
+        <header class="header">
+            <h1><i class="fas fa-print"></i> PrintPro 58mm</h1>
+            <div id="statusBadge" class="status-badge">
+                <i class="fas fa-circle"></i> Desconectado
+            </div>
+        </header>
 
-  <div class="status" id="statusStrip">
-    <span class="dot"></span>
-    <span id="statusText">Impressora desconectada</span>
-  </div>
+        <div class="content">
+            <button id="connectBtn" class="btn" style="grid-column: span 2; flex-direction: row; justify-content: center; background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); color: var(--primary-color);">
+                <i class="fab fa-bluetooth-b" style="color: var(--primary-color);"></i> Conectar Impressora
+            </button>
 
-  <div class="msg" id="msgBox" role="alert"></div>
+            <div class="paper-preview">
+                <textarea id="textInput" placeholder="Digite o recibo...&#10;&#10;Use as ferramentas abaixo para formatar ou criar QR Codes automáticos."></textarea>
+            </div>
 
-  <section class="panel" id="settingsPanel" aria-label="Configurações">
-    <h2>Configurações</h2>
-
-    <div class="field">
-      <label for="inputName">Seu nome (para a saudação)</label>
-      <input type="text" id="inputName" placeholder="Ex.: Marina" autocomplete="off">
-    </div>
-
-    <div class="field">
-      <label for="inputCity">Cidade para o clima</label>
-      <div class="field-row">
-        <input type="text" id="inputCity" placeholder="Ex.: Curitiba, BR" autocomplete="off">
-        <button class="btn-inline" id="btnGeo" type="button">📍 Usar local</button>
-      </div>
-    </div>
-
-    <div class="field">
-      <label for="selectCategory">Notícias</label>
-      <div class="chips" id="categoryChips">
-        <button class="chip active" data-cat="geral" type="button">Geral</button>
-        <button class="chip" data-cat="tecnologia" type="button">Tecnologia</button>
-        <button class="chip" data-cat="economia" type="button">Economia</button>
-        <button class="chip" data-cat="esportes" type="button">Esportes</button>
-      </div>
+            <div class="controls">
+                <button class="btn" onclick="insertFormat('center')">
+                    <i class="fas fa-align-center"></i> Centralizar
+                </button>
+                <button class="btn" onclick="insertFormat('bold')">
+                    <i class="fas fa-bold"></i> Negrito
+                </button>
+                <button class="btn" onclick="insertFormat('separator')">
+                    <i class="fas fa-minus"></i> Linha
+                </button>
+                <button class="btn" onclick="insertFormat('qr')">
+                    <i class="fas fa-qrcode"></i> Add QR Code
+                </button>
+                
+                <button id="printBtn" class="btn btn-primary" disabled>
+                    <i class="fas fa-paper-plane"></i> Imprimir Recibo
+                </button>
+            </div>
+        </div>
     </div>
 
-    <div class="field">
-      <label for="inputWidth">Colunas por linha (calibre com o botão abaixo)</label>
-      <div class="field-row">
-        <input type="text" inputmode="numeric" id="inputWidth" value="32">
-        <button class="btn-inline" id="btnPreset32" type="button">58&nbsp;mm</button>
-        <button class="btn-inline" id="btnPreset48" type="button">80&nbsp;mm</button>
-      </div>
-    </div>
-    <div class="field">
-      <button class="btn-inline" id="btnCalibrate" type="button" style="width:100%">🖨 Imprimir teste de largura</button>
-      <p style="font-size:0.72rem;color:var(--ink-soft);margin:0.4rem 0 0 0;">
-        Imprime réguas numeradas. Veja em qual número a linha começa a quebrar e ajuste as colunas acima para esse valor (normalmente um pouco menor que o nominal, ex.: papel de 57,5&nbsp;mm costuma imprimir bem com 30–31 colunas).
-      </p>
-    </div>
+    <div id="toast" class="toast">Mensagem do sistema</div>
 
-    <div class="field">
-      <label class="toggle">
-        <input type="checkbox" id="toggleAccents" checked>
-        Remover acentos ao imprimir (recomendado — evita caracteres estranhos em impressoras que não suportam UTF-8)
-      </label>
-    </div>
+    <script>
+        const PRINTER_SERVICE = '000018f0-0000-1000-8000-00805f9b34fb';
+        const ALT_SERVICE = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
 
-    <div class="field">
-      <label class="toggle">
-        <input type="checkbox" id="toggleCut">
-        Cortar papel automaticamente ao final (apenas se sua impressora tiver guilhotina)
-      </label>
-    </div>
-  </section>
+        let bluetoothDevice = null;
+        let printCharacteristic = null;
 
-  <div class="controls">
-    <button class="action secondary" id="btnConnect" type="button">Conectar impressora</button>
-    <button class="action secondary" id="btnRefresh" type="button">Atualizar conteúdo</button>
-    <button class="action accent" id="btnPrint" type="button" disabled>Imprimir despacho</button>
-  </div>
+        const connectBtn = document.getElementById('connectBtn');
+        const printBtn = document.getElementById('printBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const textInput = document.getElementById('textInput');
 
-  <div class="preview-wrap">
-    <div class="receipt" id="receipt">
-      <div class="r-empty">Toque em "Atualizar conteúdo" para buscar o clima e as notícias de hoje.</div>
-    </div>
-  </div>
+        // Textos de exemplo padrão
+        textInput.value = "[C][B]LOJA DO DESENVOLVEDOR\n[C]Rua do Codigo, 404\n--------------------------------\n1x CAFE EXPRESSO           5,00\n1x AGUA MINERAL            3,00\n--------------------------------\n[B]TOTAL                      8,00\n\n[C]Acesse nosso cardapio:\n[QR]https://github.com\n\n[C]Obrigado pela visita!";
 
-  <footer>
-    Conexão via Web Bluetooth (protocolo ESC/POS) · funciona no Chrome/Edge para Android e desktop. Não é compatível com Safari/iOS.
-  </footer>
-
-</div>
-
-<script>
-(function(){
-  "use strict";
-
-  /* =========================================================
-     ESTADO (mantido apenas em memória, nunca salvo em disco)
-     ========================================================= */
-  const state = {
-    userName: "",
-    city: "",
-    coords: null,        // {lat, lon, label}
-    category: "geral",
-    paperWidth: 32,
-    removeAccents: true,
-    cutPaper: false,
-    weather: null,
-    news: null,
-    lastFetchedAt: null,
-    device: null,
-    characteristic: null
-  };
-
-  const NEWS_FEEDS = {
-    geral:      "https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-BR",
-    tecnologia: "https://news.google.com/rss/search?q=tecnologia&hl=pt-BR&gl=BR&ceid=BR:pt-BR",
-    economia:   "https://news.google.com/rss/search?q=economia&hl=pt-BR&gl=BR&ceid=BR:pt-BR",
-    esportes:   "https://news.google.com/rss/search?q=esportes&hl=pt-BR&gl=BR&ceid=BR:pt-BR"
-  };
-
-  const WEATHER_CODES = {
-    0:"Céu limpo", 1:"Poucas nuvens", 2:"Parcialmente nublado", 3:"Nublado",
-    45:"Neblina", 48:"Neblina com geada",
-    51:"Garoa fraca", 53:"Garoa", 55:"Garoa forte",
-    56:"Garoa congelante", 57:"Garoa congelante forte",
-    61:"Chuva fraca", 63:"Chuva", 65:"Chuva forte",
-    66:"Chuva congelante", 67:"Chuva congelante forte",
-    71:"Neve fraca", 73:"Neve", 75:"Neve forte", 77:"Grãos de neve",
-    80:"Pancadas de chuva fracas", 81:"Pancadas de chuva", 82:"Pancadas de chuva fortes",
-    85:"Pancadas de neve fracas", 86:"Pancadas de neve fortes",
-    95:"Trovoadas", 96:"Trovoadas com granizo", 99:"Trovoadas com granizo forte"
-  };
-
-  /* =========================================================
-     ELEMENTOS
-     ========================================================= */
-  const el = {
-    dateLine: document.getElementById("dateLine"),
-    statusStrip: document.getElementById("statusStrip"),
-    statusText: document.getElementById("statusText"),
-    msgBox: document.getElementById("msgBox"),
-    btnSettings: document.getElementById("btnSettings"),
-    settingsPanel: document.getElementById("settingsPanel"),
-    inputName: document.getElementById("inputName"),
-    inputCity: document.getElementById("inputCity"),
-    btnGeo: document.getElementById("btnGeo"),
-    categoryChips: document.getElementById("categoryChips"),
-    inputWidth: document.getElementById("inputWidth"),
-    btnPreset32: document.getElementById("btnPreset32"),
-    btnPreset48: document.getElementById("btnPreset48"),
-    btnCalibrate: document.getElementById("btnCalibrate"),
-    toggleAccents: document.getElementById("toggleAccents"),
-    toggleCut: document.getElementById("toggleCut"),
-    btnConnect: document.getElementById("btnConnect"),
-    btnRefresh: document.getElementById("btnRefresh"),
-    btnPrint: document.getElementById("btnPrint"),
-    receipt: document.getElementById("receipt")
-  };
-
-  /* =========================================================
-     UTIL: mensagens, data/hora
-     ========================================================= */
-  function showMsg(text, type){
-    el.msgBox.textContent = text;
-    el.msgBox.className = "msg show" + (type === "info" ? " info" : "");
-  }
-  function hideMsg(){
-    el.msgBox.className = "msg";
-  }
-
-  function updateDateLine(){
-    const now = new Date();
-    const formatted = now.toLocaleDateString("pt-BR", {
-      weekday: "long", day: "numeric", month: "long", year: "numeric"
-    });
-    el.dateLine.textContent = formatted;
-  }
-
-  function greetingForHour(hour){
-    if(hour < 12) return "Bom dia";
-    if(hour < 18) return "Boa tarde";
-    return "Boa noite";
-  }
-
-  function removerAcentos(str){
-    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  }
-
-  // Substitui pontuação tipográfica comum (aspas curvas, travessões, grau,
-  // reticências, marcadores) por equivalentes ASCII e remove qualquer
-  // caractere restante fora do intervalo ASCII imprimível. Isso evita
-  // caracteres corrompidos em impressoras que só suportam uma única
-  // codepage de 8 bits (a maioria das mini impressoras ESC/POS).
-  const TYPO_MAP = {
-    "\u2018":"'", "\u2019":"'", "\u201A":"'", "\u2032":"'",
-    "\u201C":"\"", "\u201D":"\"", "\u201E":"\"", "\u2033":"\"",
-    "\u00AB":"\"", "\u00BB":"\"",
-    "\u2013":"-", "\u2014":"-", "\u2212":"-",
-    "\u2022":"-", "\u25CF":"-", "\u2027":"-", "\u00B7":"-",
-    "\u2026":"...",
-    "\u00B0":"",
-    "\u00A0":" "
-  };
-  function sanitizeForPrint(str){
-    let s = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    s = s.replace(/[\u2018\u2019\u201A\u2032\u201C\u201D\u201E\u2033\u00AB\u00BB\u2013\u2014\u2212\u2022\u25CF\u2027\u00B7\u2026\u00B0\u00A0]/g, function(ch){
-      return TYPO_MAP[ch] !== undefined ? TYPO_MAP[ch] : ch;
-    });
-    // rede de segurança final: remove qualquer caractere fora do ASCII imprimível
-    s = s.replace(/[^\x20-\x7E]/g, "");
-    return s;
-  }
-
-  // Quebra manual de texto em linhas de no máximo `width` colunas.
-  // Fazemos a quebra no cliente (em vez de depender do auto-wrap da
-  // impressora) porque muitos clones ESC/POS quebram de forma inconsistente
-  // quando a largura configurada não bate exatamente com a largura física.
-  function wrapText(text, width){
-    const w = Math.max(parseInt(width, 10) || 32, 8);
-    const words = String(text).split(/\s+/).filter(Boolean);
-    if(!words.length) return [""];
-    const lines = [];
-    let cur = "";
-    words.forEach(function(rawWord){
-      let word = rawWord;
-      while(word.length > w){
-        if(cur){ lines.push(cur); cur = ""; }
-        lines.push(word.slice(0, w));
-        word = word.slice(w);
-      }
-      if(!cur){
-        cur = word;
-      } else if((cur + " " + word).length <= w){
-        cur += " " + word;
-      } else {
-        lines.push(cur);
-        cur = word;
-      }
-    });
-    if(cur) lines.push(cur);
-    return lines.length ? lines : [""];
-  }
-
-  // Expande as linhas lógicas (uma por "ideia") em linhas físicas já
-  // quebradas na largura configurada, prontas para tela ou impressora.
-  function wrapLogicalLines(lines, width){
-    const out = [];
-    lines.forEach(function(line){
-      if(line.type === "divider" || line.type === "spacer"){
-        out.push(line);
-        return;
-      }
-      if(line.type === "news"){
-        const prefix = line.index + ". ";
-        const avail = Math.max(width - prefix.length, 8);
-        const wrapped = wrapText(line.text, avail);
-        wrapped.forEach(function(w, i){
-          out.push({ type:"news", text: i === 0 ? prefix + w : " ".repeat(prefix.length) + w });
-        });
-        return;
-      }
-      const wrapped = wrapText(line.text, width);
-      wrapped.forEach(function(w){ out.push({ type: line.type, text: w }); });
-    });
-    return out;
-  }
-
-  function escapeHtml(str){
-    const d = document.createElement("div");
-    d.textContent = str;
-    return d.innerHTML;
-  }
-
-  /* =========================================================
-     BUSCA: CLIMA (Open-Meteo — sem necessidade de chave de API)
-     ========================================================= */
-  async function geocodeCity(cityName){
-    const url = "https://geocoding-api.open-meteo.com/v1/search?name=" +
-      encodeURIComponent(cityName) + "&count=1&language=pt&format=json";
-    const res = await fetch(url);
-    if(!res.ok) throw new Error("Não foi possível buscar a cidade.");
-    const data = await res.json();
-    if(!data.results || !data.results.length) throw new Error("Cidade não encontrada. Tente outro nome.");
-    const r = data.results[0];
-    return { lat: r.latitude, lon: r.longitude, label: [r.name, r.admin1, r.country].filter(Boolean).join(", ") };
-  }
-
-  async function fetchWeather(lat, lon){
-    const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
-      "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m" +
-      "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
-      "&timezone=auto";
-    const res = await fetch(url);
-    if(!res.ok) throw new Error("Não foi possível obter a previsão do tempo.");
-    return res.json();
-  }
-
-  async function loadWeather(){
-    let coords = state.coords;
-    if(!coords){
-      if(!state.city) throw new Error("Informe uma cidade nas configurações (ou use sua localização).");
-      coords = await geocodeCity(state.city);
-      state.coords = coords;
-    }
-    const data = await fetchWeather(coords.lat, coords.lon);
-    const desc = WEATHER_CODES[data.current.weather_code] || "Condição desconhecida";
-    return {
-      label: coords.label,
-      tempNow: Math.round(data.current.temperature_2m),
-      humidity: Math.round(data.current.relative_humidity_2m),
-      wind: Math.round(data.current.wind_speed_10m),
-      desc: desc,
-      tempMax: Math.round(data.daily.temperature_2m_max[0]),
-      tempMin: Math.round(data.daily.temperature_2m_min[0]),
-      rainChance: data.daily.precipitation_probability_max ? data.daily.precipitation_probability_max[0] : null
-    };
-  }
-
-  /* =========================================================
-     BUSCA: NOTÍCIAS (RSS via proxy público, sem necessidade de chave)
-     ========================================================= */
-  async function loadNews(){
-    const feedUrl = NEWS_FEEDS[state.category] || NEWS_FEEDS.geral;
-    const proxied = "https://api.allorigins.win/raw?url=" + encodeURIComponent(feedUrl);
-    const res = await fetch(proxied);
-    if(!res.ok) throw new Error("Não foi possível obter as notícias.");
-    const text = await res.text();
-    const xml = new DOMParser().parseFromString(text, "text/xml");
-    if(xml.querySelector("parsererror")) throw new Error("Formato de notícias inválido.");
-    const items = Array.from(xml.querySelectorAll("item")).slice(0, 6);
-    if(!items.length) throw new Error("Nenhuma notícia encontrada agora.");
-    return items.map(function(it){
-      const raw = (it.querySelector("title") && it.querySelector("title").textContent) || "";
-      return raw.trim();
-    }).filter(Boolean);
-  }
-
-  /* =========================================================
-     CONSTRUÇÃO DO CONTEÚDO (linhas lógicas, usadas tanto na
-     pré-visualização quanto na impressão ESC/POS)
-     ========================================================= */
-  function buildLines(){
-    const lines = [];
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
-
-    lines.push({ type:"header", text:"DESPACHO MATINAL" });
-    lines.push({ type:"sub", text: now.toLocaleDateString("pt-BR", { weekday:"long", day:"numeric", month:"long" }) });
-    if(state.userName){
-      lines.push({ type:"sub", text: greetingForHour(now.getHours()) + ", " + state.userName + "!" });
-    }
-    lines.push({ type:"divider" });
-
-    lines.push({ type:"section", text:"CLIMA" });
-    if(state.weather){
-      const w = state.weather;
-      lines.push({ type:"item", text: w.label });
-      lines.push({ type:"item", text: "Agora: " + w.tempNow + "\u00B0C, " + w.desc });
-      lines.push({ type:"item", text: "Maxima " + w.tempMax + "\u00B0C / Minima " + w.tempMin + "\u00B0C" });
-      lines.push({ type:"item", text: "Umidade " + w.humidity + "% / Vento " + w.wind + " km/h" });
-      if(w.rainChance !== null){
-        lines.push({ type:"item", text: "Chance de chuva: " + w.rainChance + "%" });
-      }
-    } else {
-      lines.push({ type:"item", text:"Dados do clima ainda nao carregados." });
-    }
-    lines.push({ type:"divider" });
-
-    lines.push({ type:"section", text:"PRINCIPAIS NOTICIAS" });
-    if(state.news && state.news.length){
-      state.news.forEach(function(title, i){
-        lines.push({ type:"news", index: i + 1, text: title });
-      });
-    } else {
-      lines.push({ type:"item", text:"Nenhuma noticia carregada." });
-    }
-    lines.push({ type:"divider" });
-    lines.push({ type:"sub", text:"Impresso as " + timeStr });
-    lines.push({ type:"spacer" });
-
-    return lines;
-  }
-
-  /* =========================================================
-     PRÉ-VISUALIZAÇÃO (HTML)
-     ========================================================= */
-  function renderPreview(){
-    document.documentElement.style.setProperty("--paper-ch", state.paperWidth);
-    const lines = wrapLogicalLines(buildLines(), state.paperWidth);
-    const frag = document.createDocumentFragment();
-
-    lines.forEach(function(line){
-      const div = document.createElement("div");
-      div.className = "r-line";
-      if(line.type === "header"){
-        div.classList.add("r-header");
-        div.textContent = line.text;
-      } else if(line.type === "sub"){
-        div.classList.add("r-sub");
-        div.textContent = line.text;
-      } else if(line.type === "section"){
-        div.classList.add("r-section");
-        div.textContent = line.text;
-      } else if(line.type === "item"){
-        div.classList.add("r-item");
-        div.textContent = line.text;
-      } else if(line.type === "news"){
-        div.classList.add("r-news");
-        div.textContent = line.text;
-      } else if(line.type === "divider"){
-        div.classList.add("r-divider");
-        div.textContent = "\u2500".repeat(Math.min(state.paperWidth, 64));
-      } else if(line.type === "spacer"){
-        div.classList.add("r-spacer");
-      }
-      frag.appendChild(div);
-    });
-
-    el.receipt.innerHTML = "";
-    el.receipt.appendChild(frag);
-  }
-
-  /* =========================================================
-     ESC/POS: geração de bytes
-     ========================================================= */
-  const ESC = 0x1B, GS = 0x1D;
-  function bytesInit(){ return [ESC, 0x40]; }
-  function bytesAlign(n){ return [ESC, 0x61, n]; }        // 0 esquerda, 1 centro
-  function bytesBold(on){ return [ESC, 0x45, on ? 1 : 0]; }
-  // GS ! n -- bits 0-3 = magnificação de ALTURA, bits 4-7 = magnificação de
-  // LARGURA. Usamos apenas altura dupla (0x01) no cabeçalho: isso o deixa
-  // em destaque sem dobrar a largura de cada caractere, o que do contrário
-  // reduziria pela metade a quantidade de colunas disponíveis naquela linha
-  // e causaria quebras extras.
-  function bytesDoubleHeight(on){ return [GS, 0x21, on ? 0x01 : 0x00]; }
-  function bytesFeed(n){ return [ESC, 0x64, n]; }
-  function bytesCut(){ return [GS, 0x56, 0x01]; }
-
-  function textToBytes(str){
-    const cleaned = state.removeAccents ? sanitizeForPrint(str) : str;
-    return Array.from(new TextEncoder().encode(cleaned + "\n"));
-  }
-
-  function buildEscPos(){
-    const lines = wrapLogicalLines(buildLines(), state.paperWidth);
-    let out = [];
-    out = out.concat(bytesInit());
-
-    lines.forEach(function(line){
-      if(line.type === "header"){
-        out = out.concat(bytesAlign(1), bytesBold(true), bytesDoubleHeight(true));
-        out = out.concat(textToBytes(line.text));
-        out = out.concat(bytesDoubleHeight(false), bytesBold(false), bytesAlign(0));
-      } else if(line.type === "sub"){
-        out = out.concat(bytesAlign(1));
-        out = out.concat(textToBytes(line.text));
-        out = out.concat(bytesAlign(0));
-      } else if(line.type === "section"){
-        out = out.concat(bytesBold(true));
-        out = out.concat(textToBytes(line.text));
-        out = out.concat(bytesBold(false));
-      } else if(line.type === "item"){
-        out = out.concat(textToBytes(line.text));
-      } else if(line.type === "news"){
-        out = out.concat(textToBytes(line.text));
-      } else if(line.type === "divider"){
-        out = out.concat(textToBytes("-".repeat(state.paperWidth)));
-      } else if(line.type === "spacer"){
-        out = out.concat(textToBytes(""));
-      }
-    });
-
-    out = out.concat(bytesFeed(3));
-    if(state.cutPaper) out = out.concat(bytesCut());
-    return new Uint8Array(out);
-  }
-
-  // Imprime réguas numeradas para o usuário calibrar a quantidade real de
-  // colunas que a impressora consegue imprimir em uma linha sem quebrar.
-  function buildCalibrationEscPos(){
-    let out = [];
-    out = out.concat(bytesInit(), bytesAlign(0));
-    out = out.concat(textToBytes("TESTE DE LARGURA"));
-    out = out.concat(textToBytes("-".repeat(64)));
-    for(let start = 1; start <= 64; start += 10){
-      let ruler = "";
-      for(let i = start; i < start + 10 && i <= 64; i++){
-        ruler += String(i % 10);
-      }
-      out = out.concat(textToBytes(ruler));
-    }
-    out = out.concat(textToBytes("-".repeat(64)));
-    out = out.concat(textToBytes("ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ"));
-    out = out.concat(textToBytes("Ajuste as colunas para o ultimo numero legivel antes da quebra."));
-    out = out.concat(bytesFeed(3));
-    return new Uint8Array(out);
-  }
-
-  /* =========================================================
-     BLUETOOTH (Web Bluetooth API, protocolo ESC/POS)
-     ========================================================= */
-  const KNOWN_SERVICE_UUIDS = [
-    "000018f0-0000-1000-8000-00805f9b34fb",
-    "0000ff00-0000-1000-8000-00805f9b34fb",
-    "49535343-fe7d-4ae5-8fa9-9fafd205e455",
-    "e7810a71-73ae-499d-8c15-faa9aef0c3f2"
-  ];
-
-  async function connectPrinter(){
-    if(!navigator.bluetooth){
-      throw new Error("Este navegador não suporta Web Bluetooth. Use Chrome ou Edge (Android ou desktop).");
-    }
-    const device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: KNOWN_SERVICE_UUIDS
-    });
-    const server = await device.gatt.connect();
-    const services = await server.getPrimaryServices();
-
-    let writable = null;
-    for(const service of services){
-      let chars = [];
-      try{ chars = await service.getCharacteristics(); } catch(e){ continue; }
-      for(const ch of chars){
-        if(ch.properties.write || ch.properties.writeWithoutResponse){
-          writable = ch;
-          break;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
-      }
-      if(writable) break;
-    }
-    if(!writable){
-      throw new Error("Impressora conectada, mas nenhuma característica de escrita foi encontrada.");
-    }
 
-    device.addEventListener("gattserverdisconnected", onPrinterDisconnected);
+        connectBtn.addEventListener('click', async () => {
+            try {
+                if (!navigator.bluetooth) {
+                    showToast('Web Bluetooth não suportado neste navegador.');
+                    return;
+                }
+                showToast('Buscando...');
+                bluetoothDevice = await navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true,
+                    optionalServices: [PRINTER_SERVICE, ALT_SERVICE, '49535343-fe7d-4ae5-8fa9-9fafd205e455']
+                });
+                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+                const server = await bluetoothDevice.gatt.connect();
+                let service;
+                try { service = await server.getPrimaryService(PRINTER_SERVICE); } 
+                catch (e) { service = await server.getPrimaryService(ALT_SERVICE); }
+                const characteristics = await service.getCharacteristics();
+                printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
 
-    state.device = device;
-    state.characteristic = writable;
-  }
+                if (printCharacteristic) {
+                    statusBadge.classList.add('connected');
+                    statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> ' + (bluetoothDevice.name || 'Conectado');
+                    printBtn.disabled = false;
+                    connectBtn.style.display = 'none';
+                    showToast('Pronto para imprimir!');
+                }
+            } catch (error) {
+                showToast('Erro: ' + error.message);
+            }
+        });
 
-  function onPrinterDisconnected(){
-    state.device = null;
-    state.characteristic = null;
-    updateStatus();
-  }
+        function onDisconnected() {
+            statusBadge.classList.remove('connected');
+            statusBadge.innerHTML = '<i class="fas fa-times-circle"></i> Desconectado';
+            printBtn.disabled = true;
+            connectBtn.style.display = 'flex';
+            printCharacteristic = null;
+        }
 
-  async function sendToPrinter(bytes){
-    if(!state.characteristic) throw new Error("Impressora não conectada.");
-    const chunkSize = 20;
-    for(let i = 0; i < bytes.length; i += chunkSize){
-      const chunk = bytes.slice(i, i + chunkSize);
-      if(state.characteristic.properties.writeWithoutResponse){
-        await state.characteristic.writeValueWithoutResponse(chunk);
-      } else {
-        await state.characteristic.writeValue(chunk);
-      }
-      await new Promise(function(r){ setTimeout(r, 15); });
-    }
-  }
+        function insertFormat(type) {
+            const cursorPos = textInput.selectionStart;
+            const text = textInput.value;
+            let insertStr = "";
 
-  /* =========================================================
-     STATUS / UI
-     ========================================================= */
-  function updateStatus(){
-    const connected = !!state.characteristic;
-    el.statusStrip.className = "status" + (connected ? " is-ok" : "");
-    el.statusText.textContent = connected
-      ? "Impressora conectada" + (state.device && state.device.name ? " — " + state.device.name : "")
-      : "Impressora desconectada";
-    el.btnConnect.textContent = connected ? "Desconectar impressora" : "Conectar impressora";
-    el.btnPrint.disabled = !connected || !state.weather && !state.news;
-  }
+            if (type === 'separator') insertStr = "\n--------------------------------\n";
+            else if (type === 'bold') insertStr = "[B]";
+            else if (type === 'center') insertStr = "[C]";
+            else if (type === 'qr') insertStr = "\n[QR]https://seusite.com.br\n";
 
-  function setBusy(button, busyLabel){
-    button.dataset.originalLabel = button.textContent;
-    button.textContent = busyLabel;
-    button.disabled = true;
-  }
-  function clearBusy(button){
-    if(button.dataset.originalLabel) button.textContent = button.dataset.originalLabel;
-    button.disabled = false;
-  }
+            textInput.value = text.slice(0, cursorPos) + insertStr + text.slice(cursorPos);
+            textInput.focus();
+        }
 
-  /* =========================================================
-     AÇÕES
-     ========================================================= */
-  async function handleConnect(){
-    hideMsg();
-    if(state.characteristic){
-      try{ state.device.gatt.disconnect(); } catch(e){}
-      state.device = null;
-      state.characteristic = null;
-      updateStatus();
-      return;
-    }
-    setBusy(el.btnConnect, "Conectando…");
-    try{
-      await connectPrinter();
-      showMsg("Impressora conectada com sucesso.", "info");
-    } catch(err){
-      showMsg(err.message || "Não foi possível conectar à impressora.");
-    } finally {
-      clearBusy(el.btnConnect);
-      updateStatus();
-    }
-  }
+        // --- Lógica de geração de QR Code nativo ESC/POS ---
+        function getQRCodeBytes(text) {
+            let bytes = [];
+            const encoder = new TextEncoder();
+            const textBytes = encoder.encode(text);
+            
+            // O tamanho dos dados = tamanho do texto + 3
+            const storeLen = textBytes.length + 3;
+            const pL = storeLen & 0xFF;         // Byte inferior
+            const pH = (storeLen >> 8) & 0xFF;  // Byte superior
 
-  async function handleRefresh(){
-    hideMsg();
-    setBusy(el.btnRefresh, "Atualizando…");
-    const results = await Promise.allSettled([ loadWeather(), loadNews() ]);
+            // Comando de Alinhamento: Centralizado antes de imprimir o QR
+            bytes.push(0x1B, 0x61, 0x01); 
 
-    if(results[0].status === "fulfilled"){
-      state.weather = results[0].value;
-    } else {
-      state.weather = null;
-    }
-    if(results[1].status === "fulfilled"){
-      state.news = results[1].value;
-    } else {
-      state.news = null;
-    }
+            // 1. Configurar Modelo do QR (Modelo 2)
+            bytes.push(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
+            
+            // 2. Configurar Tamanho do Módulo (1 a 16. O '6' é um tamanho ótimo para 58mm)
+            bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06);
+            
+            // 3. Configurar Nível de Correção de Erro (48 = L, 49 = M, 50 = Q, 51 = H)
+            bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30); // Usando L (48 / 0x30)
+            
+            // 4. Armazenar Dados no buffer do QR da impressora
+            bytes.push(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30);
+            bytes.push(...textBytes);
+            
+            // 5. Imprimir o QR armazenado
+            bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
+            
+            // Comando de Alinhamento: Voltar para Esquerda após o QR
+            bytes.push(0x1B, 0x61, 0x00); 
 
-    const errors = results.filter(r => r.status === "rejected").map(r => r.reason.message);
-    if(errors.length){
-      showMsg(errors.join(" "));
-    } else {
-      showMsg("Conteúdo atualizado.", "info");
-    }
+            return bytes;
+        }
 
-    renderPreview();
-    updateStatus();
-    clearBusy(el.btnRefresh);
-  }
+        printBtn.addEventListener('click', async () => {
+            if (!printCharacteristic) return;
+            const text = textInput.value;
+            if (!text) return;
 
-  async function handlePrint(){
-    hideMsg();
-    setBusy(el.btnPrint, "Imprimindo…");
-    try{
-      const bytes = buildEscPos();
-      await sendToPrinter(bytes);
-      showMsg("Despacho enviado para a impressora.", "info");
-    } catch(err){
-      showMsg(err.message || "Falha ao imprimir.");
-    } finally {
-      clearBusy(el.btnPrint);
-    }
-  }
+            try {
+                printBtn.disabled = true;
+                printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Imprimindo...';
 
-  async function handleGeo(){
-    hideMsg();
-    if(!navigator.geolocation){
-      showMsg("Geolocalização não é suportada neste navegador.");
-      return;
-    }
-    setBusy(el.btnGeo, "Localizando…");
-    navigator.geolocation.getCurrentPosition(function(pos){
-      state.coords = {
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-        label: "Sua localização"
-      };
-      state.city = "";
-      el.inputCity.value = "";
-      clearBusy(el.btnGeo);
-      showMsg("Localização definida. Toque em \"Atualizar conteúdo\".", "info");
-    }, function(err){
-      clearBusy(el.btnGeo);
-      showMsg("Não foi possível obter sua localização: " + err.message);
-    }, { timeout: 8000 });
-  }
+                let bytes = [];
+                bytes.push(0x1B, 0x40); // Reset / Initialize
 
-  /* =========================================================
-     EVENTOS DE CONFIGURAÇÃO
-     ========================================================= */
-  el.btnSettings.addEventListener("click", function(){
-    el.settingsPanel.classList.toggle("open");
-  });
+                const lines = text.split('\n');
+                
+                for (let line of lines) {
+                    const trimmed = line.trim();
+                    
+                    // Verifica se é uma linha de comando QR Code
+                    if (trimmed.startsWith('[QR]')) {
+                        const qrData = trimmed.replace('[QR]', '');
+                        if (qrData) {
+                            bytes.push(...getQRCodeBytes(qrData));
+                            bytes.push(0x0A); // Quebra de linha após o QR
+                        }
+                        continue; // Pula a lógica normal de texto
+                    }
 
-  el.inputName.addEventListener("input", function(){
-    state.userName = el.inputName.value.trim();
-    renderPreview();
-  });
+                    // Lógica normal de texto
+                    let isBold = false;
+                    let isCenter = false;
 
-  el.inputCity.addEventListener("input", function(){
-    state.city = el.inputCity.value.trim();
-    state.coords = null;
-  });
+                    if (line.includes('[B]')) { isBold = true; line = line.replace('[B]', ''); }
+                    if (line.includes('[C]')) { isCenter = true; line = line.replace('[C]', ''); }
 
-  el.btnGeo.addEventListener("click", handleGeo);
+                    if (isCenter) bytes.push(0x1B, 0x61, 1);
+                    else bytes.push(0x1B, 0x61, 0);
 
-  el.categoryChips.addEventListener("click", function(e){
-    const chip = e.target.closest(".chip");
-    if(!chip) return;
-    state.category = chip.dataset.cat;
-    Array.from(el.categoryChips.children).forEach(c => c.classList.toggle("active", c === chip));
-  });
+                    if (isBold) bytes.push(0x1B, 0x45, 1);
+                    else bytes.push(0x1B, 0x45, 0);
 
-  function applyWidth(n){
-    const clamped = Math.min(Math.max(parseInt(n, 10) || 32, 16), 64);
-    state.paperWidth = clamped;
-    el.inputWidth.value = clamped;
-    renderPreview();
-  }
+                    const normalizedLine = line.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const encodedText = new TextEncoder().encode(normalizedLine);
+                    
+                    bytes.push(...encodedText);
+                    bytes.push(0x0A);
+                }
 
-  el.inputWidth.addEventListener("change", function(){ applyWidth(el.inputWidth.value); });
-  el.btnPreset32.addEventListener("click", function(){ applyWidth(32); });
-  el.btnPreset48.addEventListener("click", function(){ applyWidth(48); });
+                // Alimentar papel (3 quebras de linha para destacar fácil)
+                bytes.push(0x0A, 0x0A, 0x0A);
 
-  el.btnCalibrate.addEventListener("click", async function(){
-    hideMsg();
-    if(!state.characteristic){
-      showMsg("Conecte a impressora antes de imprimir o teste de largura.");
-      return;
-    }
-    setBusy(el.btnCalibrate, "Imprimindo teste…");
-    try{
-      await sendToPrinter(buildCalibrationEscPos());
-      showMsg("Teste enviado. Veja no papel onde as réguas quebram e ajuste as colunas.", "info");
-    } catch(err){
-      showMsg(err.message || "Falha ao imprimir o teste.");
-    } finally {
-      clearBusy(el.btnCalibrate);
-    }
-  });
+                // Envio fragmentado para evitar travamento da conexão BLE
+                const dataArray = new Uint8Array(bytes);
+                const CHUNK_SIZE = 40; 
+                
+                for (let i = 0; i < dataArray.length; i += CHUNK_SIZE) {
+                    const chunk = dataArray.slice(i, i + CHUNK_SIZE);
+                    await printCharacteristic.writeValue(chunk);
+                    await new Promise(resolve => setTimeout(resolve, 20)); 
+                }
 
-  el.toggleAccents.addEventListener("change", function(){
-    state.removeAccents = el.toggleAccents.checked;
-  });
-
-  el.toggleCut.addEventListener("change", function(){
-    state.cutPaper = el.toggleCut.checked;
-  });
-
-  el.btnConnect.addEventListener("click", handleConnect);
-  el.btnRefresh.addEventListener("click", handleRefresh);
-  el.btnPrint.addEventListener("click", handlePrint);
-
-  /* =========================================================
-     INICIALIZAÇÃO
-     ========================================================= */
-  function init(){
-    updateDateLine();
-    setInterval(updateDateLine, 60 * 1000);
-    document.documentElement.style.setProperty("--paper-ch", state.paperWidth);
-    updateStatus();
-    if(!navigator.bluetooth){
-      el.btnConnect.disabled = true;
-      showMsg("Seu navegador não suporta Web Bluetooth. Abra este app no Chrome ou Edge (Android ou computador) para conectar a impressora.");
-    }
-  }
-
-  init();
-})();
-</script>
+            } catch (error) {
+                showToast('Falha: ' + error.message);
+            } finally {
+                printBtn.disabled = false;
+                printBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Imprimir Recibo';
+            }
+        });
+    </script>
 </body>
 </html>
