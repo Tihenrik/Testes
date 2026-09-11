@@ -97,7 +97,8 @@
   .preview-section{display:flex; flex-direction:column; gap:10px; min-width:0;}
   .paper-scroll{
     background:#cbd5e1; border-radius:12px; padding:clamp(12px,3vw,28px);
-    display:flex; justify-content:center; align-items:flex-start; overflow:auto; min-height:260px; max-height:480px;
+    display:flex; justify-content:center; align-items:flex-start; overflow:auto;
+    min-height:220px; height:clamp(320px, 58vh, 560px);
   }
   .receipt-wrapper{display:flex; justify-content:center;}
   .receipt-paper{
@@ -320,8 +321,8 @@ function openModal({ title, fields, confirmLabel = 'Confirmar' }){
     backdrop.className = 'modal-backdrop';
     const fieldsHtml = fields.map(f => `
       <div class="modal-field">
-        <label for="mf_${f.id}">${f.label}</label>
-        <input id="mf_${f.id}" type="${f.type || 'text'}" placeholder="${f.placeholder || ''}" value="${f.value || ''}">
+        <label for="mf_${f.id}">${escapeHtml(f.label)}</label>
+        <input id="mf_${f.id}" type="${f.type || 'text'}" placeholder="${escapeHtml(f.placeholder || '')}" value="${escapeHtml(f.value || '')}">
       </div>`).join('');
     backdrop.innerHTML = `
       <div class="modal-card">
@@ -458,7 +459,7 @@ function fakeBarcodeHtml(data){
     const gap = (c % 2 === 0) ? 2 : 1;
     bars += `<span style="width:${w}px;height:${18 + (c % 20)}px;margin-right:${gap}px;"></span>`;
   }
-  return `<div class="barcode-fake">${bars}</div><div class="barcode-label">${escapeHtml(data)}</div>`;
+  return `<div class="barcode-fake">${bars}</div><div class="barcode-label">${escapeHtml(data)}</div><div style="text-align:center;font-size:9px;color:#94a3b8;margin-top:2px;">(prévia aproximada — a impressora gera o código real)</div>`;
 }
 function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -490,10 +491,10 @@ function updatePreview(){
     }
 
     const { text: displayLine, isBold, isCenter, isDouble, isInvert } = parseLine(line);
-    let style = 'white-space:pre-wrap; word-break:break-all;';
+    let style = 'white-space:pre;';
     if (isCenter) style += 'text-align:center;';
     if (isBold) style += 'font-weight:bold;';
-    if (isDouble) style += 'font-size:1.9em; line-height:1.1; font-weight:bold;';
+    if (isDouble) style += 'font-size:2em; line-height:1.15; font-weight:bold;';
     if (isInvert) style += 'background:#000; color:#fff; display:inline-block; width:100%;';
     html += `<div style="${style}">${escapeHtml(displayLine) || ' '}</div>`;
   }
@@ -501,15 +502,21 @@ function updatePreview(){
   scaleReceiptToFit();
 }
 
-/* Escala o cupom para caber em qualquer largura de tela, sem cortar conteúdo */
+/* Escala o cupom por largura E altura, para caber inteiro em qualquer tela
+   sem depender de rolagem escondida (o que cortava o final do cupom no mobile) */
 function scaleReceiptToFit(){
   const wrapper = receiptPreview.parentElement;
-  const available = paperScroll.clientWidth - 24;
-  const natural = receiptPreview.scrollWidth;
-  const scale = natural > available ? Math.max(available / natural, 0.55) : 1;
+  receiptPreview.style.transform = 'scale(1)'; // mede em tamanho real primeiro
+  const availableW = paperScroll.clientWidth - 24;
+  const availableH = paperScroll.clientHeight - 24;
+  const naturalW = receiptPreview.scrollWidth;
+  const naturalH = receiptPreview.scrollHeight;
+  const scaleW = naturalW > availableW ? availableW / naturalW : 1;
+  const scaleH = naturalH > availableH ? availableH / naturalH : 1;
+  const scale = Math.max(Math.min(scaleW, scaleH, 1), 0.4);
   receiptPreview.style.transform = `scale(${scale})`;
-  wrapper.style.height = (receiptPreview.scrollHeight * scale) + 'px';
-  wrapper.style.width = (receiptPreview.scrollWidth * scale) + 'px';
+  wrapper.style.height = (naturalH * scale) + 'px';
+  wrapper.style.width = (naturalW * scale) + 'px';
 }
 
 new ResizeObserver(scaleReceiptToFit).observe(paperScroll);
@@ -677,6 +684,10 @@ function buildReceiptBytes(rawText){
   const text = resolveVariables(rawText);
   const bytes = [];
   bytes.push(0x1B, 0x40); // reset
+  // Seleciona a code page ativa na impressora (ESC t n).
+  // n=3 é CP860 (Português) na maioria dos firmwares ESC/POS;
+  // sem este comando, os bytes acentuados seriam impressos com a tabela errada.
+  bytes.push(0x1B, 0x74, accentToggle.checked ? 0x03 : 0x00);
 
   const lines = text.split('\n');
   for (let line of lines){
@@ -826,22 +837,46 @@ exportBtn.addEventListener('click', async () => {
 
 /* =========================================================
    ARMAZENAMENTO: TEMPLATES, HISTÓRICO, CONTADOR DE PEDIDO
-   (window.storage — dados pessoais, não compartilhados)
+   (localStorage do navegador — este app roda como página própria,
+   então os dados ficam salvos localmente neste dispositivo/navegador)
    ========================================================= */
+const STORAGE_PREFIX = 'printpro:';
+
+function storageAvailable(){
+  try{
+    const t = '__printpro_test__';
+    localStorage.setItem(t, '1');
+    localStorage.removeItem(t);
+    return true;
+  }catch(e){ return false; }
+}
+const STORAGE_OK = storageAvailable();
+
 async function safeStorageList(prefix){
-  try{ const r = await window.storage.list(prefix, false); return r ? r.keys : []; }
-  catch(e){ return []; }
+  if (!STORAGE_OK) return [];
+  try{
+    const full = STORAGE_PREFIX + prefix;
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if (k && k.startsWith(full)) keys.push(k.slice(STORAGE_PREFIX.length));
+    }
+    return keys;
+  }catch(e){ return []; }
 }
 async function safeStorageGet(key){
-  try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
+  if (!STORAGE_OK) return null;
+  try{ return localStorage.getItem(STORAGE_PREFIX + key); }
   catch(e){ return null; }
 }
 async function safeStorageSet(key, value){
-  try{ await window.storage.set(key, value, false); return true; }
-  catch(e){ showToast('Erro ao salvar dados.'); return false; }
+  if (!STORAGE_OK){ showToast('Este navegador não permite salvar dados localmente (modo privado?).'); return false; }
+  try{ localStorage.setItem(STORAGE_PREFIX + key, value); return true; }
+  catch(e){ showToast('Erro ao salvar dados: ' + e.message); return false; }
 }
 async function safeStorageDelete(key){
-  try{ await window.storage.delete(key, false); return true; }
+  if (!STORAGE_OK) return false;
+  try{ localStorage.removeItem(STORAGE_PREFIX + key); return true; }
   catch(e){ return false; }
 }
 
@@ -890,6 +925,8 @@ async function addToHistory(content){
   await refreshHistory();
 }
 
+const historyContentByKey = new Map();
+
 async function refreshHistory(){
   const list = document.getElementById('historyList');
   const keys = (await safeStorageList('history:')).sort().reverse();
@@ -898,10 +935,15 @@ async function refreshHistory(){
     return;
   }
   const items = [];
+  historyContentByKey.clear();
   for (const key of keys.slice(0, 20)){
     const raw = await safeStorageGet(key);
     if (!raw) continue;
-    try{ items.push({ key, ...JSON.parse(raw) }); } catch(e){}
+    try{
+      const parsed = JSON.parse(raw);
+      items.push({ key, ...parsed });
+      historyContentByKey.set(key, parsed.content);
+    } catch(e){}
   }
   list.innerHTML = items.map(item => {
     const date = new Date(item.printedAt);
@@ -909,18 +951,22 @@ async function refreshHistory(){
     const preview = item.content.split('\n')[0].replace(/\[.*?\]/g, '').slice(0, 28);
     return `
       <div class="list-item">
-        <div>${preview || '(sem título)'}<div class="meta">${label}</div></div>
+        <div>${escapeHtml(preview) || '(sem título)'}<div class="meta">${label}</div></div>
         <div class="actions">
-          <button class="mini-btn" title="Reimprimir" onclick='reprintHistory(${JSON.stringify(item.content)})'><i class="fas fa-print"></i></button>
+          <button class="mini-btn" title="Reimprimir" data-reprint-key="${escapeHtml(item.key)}"><i class="fas fa-print"></i></button>
         </div>
       </div>`;
   }).join('');
 }
-function reprintHistory(content){
+document.getElementById('historyList').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-reprint-key]');
+  if (!btn) return;
+  const content = historyContentByKey.get(btn.dataset.reprintKey);
+  if (content === undefined) return;
   textInput.value = content;
   updatePreview();
   showToast('Cupom carregado no editor. Clique em Imprimir.');
-}
+});
 
 async function saveCounter(){
   await safeStorageSet('counter:pedido', orderNumberInput.value);
