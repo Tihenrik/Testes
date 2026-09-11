@@ -1,468 +1,944 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PrintPro 58mm | Smart Studio</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #0f172a;
-            --surface-color: #1e293b;
-            --primary-color: #3b82f6;
-            --primary-hover: #2563eb;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border-radius: 16px;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>PrintPro | Smart Studio</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --bg-color:#0f172a; --surface-color:#1e293b; --surface-2:#161f32;
+    --primary-color:#3b82f6; --primary-hover:#2563eb;
+    --success-color:#10b981; --danger-color:#ef4444; --warn-color:#f59e0b;
+    --text-main:#f8fafc; --text-muted:#94a3b8; --border-radius:16px;
+    --gap: clamp(10px, 2vw, 20px);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent;}
+  html,body{overflow-x:hidden;}
+  body{
+    background-color:var(--bg-color); color:var(--text-main);
+    display:flex; justify-content:center; min-height:100vh;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
+  .app-container{
+    background-color:var(--surface-color); width:100%; max-width:960px;
+    border-radius:var(--border-radius); box-shadow:0 25px 50px -12px rgba(0,0,0,.5);
+    display:flex; flex-direction:column; overflow:hidden; border:1px solid rgba(255,255,255,.1);
+  }
+  .header{
+    padding: clamp(10px,2vw,15px) clamp(12px,3vw,20px); display:flex; justify-content:space-between;
+    align-items:center; flex-wrap:wrap; gap:8px;
+    border-bottom:1px solid rgba(255,255,255,.05);
+    background:linear-gradient(180deg, rgba(255,255,255,.05) 0%, transparent 100%);
+  }
+  .header h1{font-size:clamp(1.05rem,2.5vw,1.25rem); font-weight:600; display:flex; align-items:center; gap:10px;}
+  .header-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .status-badge{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:20px;
+    font-size:.82rem; font-weight:500; background-color:rgba(239,68,68,.1); color:var(--danger-color);
+    transition:all .3s ease; white-space:nowrap;
+  }
+  .status-badge.connected{background-color:rgba(16,185,129,.1); color:var(--success-color);}
+  .icon-btn{
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:var(--text-muted);
+    width:36px; height:36px; border-radius:8px; display:none; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .icon-btn.visible{display:inline-flex;}
+  .icon-btn:hover{color:var(--danger-color); border-color:var(--danger-color);}
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-        }
+  .settings-bar{
+    display:flex; flex-wrap:wrap; gap:10px; padding: 10px clamp(12px,3vw,20px);
+    background:var(--surface-2); border-bottom:1px solid rgba(255,255,255,.05); font-size:.8rem;
+  }
+  .settings-bar label{display:flex; align-items:center; gap:6px; color:var(--text-muted); white-space:nowrap;}
+  .settings-bar select, .settings-bar input[type=text]{
+    background:var(--bg-color); color:var(--text-main); border:1px solid rgba(255,255,255,.1);
+    border-radius:6px; padding:5px 8px; font-size:.8rem;
+  }
+  .settings-bar input[type=checkbox]{accent-color:var(--primary-color); width:16px; height:16px;}
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
+  .workspace{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr));
+    gap:var(--gap); padding:var(--gap); flex:1; min-width:0;
+  }
+  .editor-section{display:flex; flex-direction:column; gap:12px; min-width:0;}
+  .controls{display:grid; grid-template-columns:repeat(auto-fit, minmax(72px,1fr)); gap:6px;}
+  .btn{
+    background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:var(--text-main);
+    padding:10px 6px; border-radius:8px; cursor:pointer; font-size:.78rem;
+    display:flex; align-items:center; justify-content:center; gap:5px; transition:all .15s ease;
+    min-height:44px; text-align:center; line-height:1.1;
+  }
+  .btn:hover{background:rgba(255,255,255,.1);}
+  .btn:active{transform:scale(.96);}
+  .btn-primary{background:var(--primary-color); border-color:var(--primary-color); font-weight:600;}
+  .btn-primary:hover{background:var(--primary-hover);}
+  .btn-primary:disabled{opacity:.5; cursor:not-allowed;}
+  .btn-outline-danger{border-color:var(--danger-color); color:var(--danger-color);}
+  .btn-outline-success{border-color:var(--success-color); color:var(--success-color);}
 
-        .app-container {
-            background-color: var(--surface-color);
-            width: 100%;
-            max-width: 900px;
-            border-radius: var(--border-radius);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
+  .editor-box{
+    background:#0f172a; border-radius:12px; padding:12px; border:1px solid rgba(255,255,255,.1);
+    flex:1; display:flex; flex-direction:column; overflow-x:auto; min-height:200px;
+  }
+  textarea{
+    width:100%; height:100%; min-height:220px; border:none; resize:vertical; outline:none;
+    color:var(--text-main); font-family:'Courier New',Courier,monospace; font-size:13.5px; background:transparent;
+    white-space:pre; overflow-wrap:normal; line-height:1.35;
+  }
 
-        .header {
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%);
-        }
+  .action-row{display:flex; gap:8px; flex-wrap:wrap;}
+  .action-row .btn{flex:1; min-width:120px;}
 
-        .header h1 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+  .template-row{display:flex; gap:6px; align-items:center; flex-wrap:wrap;}
+  .template-row select{flex:1; min-width:110px; background:var(--bg-color); color:var(--text-main); border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:8px; font-size:.8rem;}
 
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            background-color: rgba(239, 68, 68, 0.1);
-            color: var(--danger-color);
-            transition: all 0.3s ease;
-        }
+  .preview-section{display:flex; flex-direction:column; gap:10px; min-width:0;}
+  .paper-scroll{
+    background:#cbd5e1; border-radius:12px; padding:clamp(12px,3vw,28px);
+    display:flex; justify-content:center; align-items:flex-start; overflow:auto; min-height:260px; max-height:480px;
+  }
+  .receipt-wrapper{display:flex; justify-content:center;}
+  .receipt-paper{
+    background:#fff; color:#000; box-sizing:content-box; padding:20px 15px 30px 15px;
+    font-family:'Courier New',Courier,monospace; font-size:14px; line-height:1.25; position:relative;
+    box-shadow:0 10px 20px rgba(0,0,0,.2); transform-origin:top center; width:32ch; min-width:32ch; max-width:32ch;
+  }
+  .receipt-paper::after{
+    content:""; position:absolute; bottom:-10px; left:0; right:0; height:10px; background-size:20px 20px;
+    background-image:radial-gradient(circle at 10px 10px, transparent 12px, #fff 13px);
+  }
+  .barcode-fake{display:flex; align-items:flex-end; justify-content:center; gap:1px; height:38px; margin:4px 0 2px;}
+  .barcode-fake span{display:block; background:#000; width:2px;}
+  .barcode-label{text-align:center; font-size:11px; letter-spacing:2px;}
 
-        .status-badge.connected {
-            background-color: rgba(16, 185, 129, 0.1);
-            color: var(--success-color);
-        }
+  .tabs{display:flex; gap:6px;}
+  .tab-btn{
+    flex:1; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:var(--text-muted);
+    padding:8px; border-radius:8px; cursor:pointer; font-size:.78rem;
+  }
+  .tab-btn.active{background:var(--primary-color); color:#fff; border-color:var(--primary-color);}
+  .tab-panel{display:none; background:var(--surface-2); border-radius:12px; padding:10px; max-height:180px; overflow-y:auto; font-size:.78rem;}
+  .tab-panel.active{display:block;}
+  .list-item{
+    display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .list-item:last-child{border-bottom:none;}
+  .list-item .meta{color:var(--text-muted); font-size:.72rem;}
+  .list-item .actions{display:flex; gap:6px; flex-shrink:0;}
+  .mini-btn{
+    background:rgba(255,255,255,.08); border:none; color:var(--text-main); width:28px; height:28px;
+    border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.75rem;
+  }
+  .mini-btn:hover{background:rgba(255,255,255,.18);}
+  .empty-msg{color:var(--text-muted); text-align:center; padding:16px 4px;}
 
-        .workspace {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            padding: 20px;
-            flex: 1;
-        }
+  /* Modal */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center;
+    padding:20px; z-index:2000; opacity:0; pointer-events:none; transition:opacity .2s ease;
+  }
+  .modal-backdrop.show{opacity:1; pointer-events:auto;}
+  .modal-card{
+    background:var(--surface-color); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:20px;
+    width:100%; max-width:360px; display:flex; flex-direction:column; gap:12px;
+    transform:translateY(10px); transition:transform .2s ease;
+  }
+  .modal-backdrop.show .modal-card{transform:translateY(0);}
+  .modal-card h3{font-size:1.05rem;}
+  .modal-field{display:flex; flex-direction:column; gap:4px;}
+  .modal-field label{font-size:.78rem; color:var(--text-muted);}
+  .modal-field input, .modal-field select{
+    background:var(--bg-color); border:1px solid rgba(255,255,255,.15); color:var(--text-main);
+    padding:10px; border-radius:8px; font-size:.9rem; outline:none;
+  }
+  .modal-field input:focus{border-color:var(--primary-color);}
+  .modal-actions{display:flex; gap:8px; justify-content:flex-end;}
 
-        .editor-section {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            min-width: 0; /* Previne que flexbox ignore limites */
-        }
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(100px);
+    background:var(--text-main); color:var(--bg-color); padding:12px 22px; border-radius:30px;
+    font-size:.85rem; font-weight:600; box-shadow:0 10px 15px -3px rgba(0,0,0,.3);
+    transition:transform .3s cubic-bezier(.68,-.55,.265,1.55); z-index:3000; max-width:90vw; text-align:center;
+  }
+  .toast.show{transform:translateX(-50%) translateY(0);}
 
-        .editor-box {
-            background-color: #0f172a;
-            border-radius: 12px;
-            padding: 15px;
-            border: 1px solid rgba(255,255,255,0.1);
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow-x: auto; /* Permite rolagem se o texto for largo demais */
-        }
-
-        textarea {
-            width: 100%;
-            height: 100%;
-            min-height: 250px;
-            border: none;
-            resize: none;
-            outline: none;
-            color: var(--text-main);
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
-            background: transparent;
-            white-space: pre; /* IMPEDE que o navegador quebre a linha sozinho, mantendo o formato intacto */
-            overflow-wrap: normal;
-        }
-
-        .controls {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-        }
-
-        .btn {
-            background-color: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-main);
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            transition: all 0.2s ease;
-        }
-
-        .btn:hover { background-color: rgba(255, 255, 255, 0.1); }
-        .btn:active { transform: scale(0.96); }
-        
-        .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            font-weight: 600;
-        }
-        .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        .preview-section {
-            background-color: #cbd5e1;
-            border-radius: 12px;
-            padding: 30px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            overflow-y: auto;
-            max-height: 550px;
-        }
-
-        /* CONFIGURAÇÃO EXATA PARA O TAMANHO DA BOBINA 58MM (32 COLUNAS) */
-        .receipt-paper {
-            background-color: #ffffff;
-            color: #000000;
-            width: 32ch; /* Força exatamente 32 caracteres de largura */
-            min-width: 32ch;
-            max-width: 32ch;
-            box-sizing: content-box; /* Garante que os 32ch são apenas para o texto, ignorando o padding */
-            padding: 20px 15px 30px 15px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 14px;
-            line-height: 1.2;
-            position: relative;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-
-        .receipt-paper::after {
-            content: "";
-            position: absolute;
-            bottom: -10px;
-            left: 0;
-            right: 0;
-            height: 10px;
-            background-size: 20px 20px;
-            background-image: radial-gradient(circle at 10px 10px, transparent 12px, #ffffff 13px);
-        }
-
-        /* Otimizações drásticas para telas de celular pequenas para não "esmagar" o app */
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .workspace { grid-template-columns: 1fr; padding: 15px; gap: 15px; }
-            .controls { grid-template-columns: repeat(2, 1fr); }
-            .preview-section { padding: 20px 10px; }
-        }
-
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: var(--text-main);
-            color: var(--bg-color);
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
-            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            z-index: 1000;
-        }
-        .toast.show { transform: translateX(-50%) translateY(0); }
-    </style>
+  @media (max-width:480px){
+    .header h1 span.subtitle{display:none;}
+    .settings-bar{font-size:.75rem;}
+  }
+</style>
 </head>
 <body>
 
-    <div class="app-container">
-        <header class="header">
-            <h1><i class="fas fa-print"></i> Smart Studio</h1>
-            <div id="statusBadge" class="status-badge">
-                <i class="fas fa-circle"></i> Desconectado
-            </div>
-        </header>
+<div class="app-container">
+  <header class="header">
+    <h1><i class="fas fa-print"></i> Smart Studio <span class="subtitle" style="font-weight:400;color:var(--text-muted);font-size:.8em;">PrintPro</span></h1>
+    <div class="header-actions">
+      <div id="statusBadge" class="status-badge"><i class="fas fa-circle"></i> Desconectado</div>
+      <button id="disconnectBtn" class="icon-btn" title="Desconectar"><i class="fas fa-plug-circle-xmark"></i></button>
+    </div>
+  </header>
 
-        <div class="workspace">
-            <!-- Coluna Esquerda: Controles e Edição -->
-            <div class="editor-section">
-                <div class="controls">
-                    <button class="btn" onclick="insertFormat('center')"><i class="fas fa-align-center"></i> Centro</button>
-                    <button class="btn" onclick="insertFormat('bold')"><i class="fas fa-bold"></i> Negrito</button>
-                    <button class="btn" onclick="insertFormat('separator')"><i class="fas fa-minus"></i> Linha</button>
-                    <button class="btn" onclick="insertFormat('qr')"><i class="fas fa-qrcode"></i> QR</button>
-                </div>
+  <div class="settings-bar">
+    <label>Bobina
+      <select id="paperWidth">
+        <option value="32">58mm (32 col)</option>
+        <option value="48">80mm (48 col)</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="accentToggle" checked> Acentuação (CP860)</label>
+    <label><input type="checkbox" id="autoCut" checked> Cortar papel ao final</label>
+    <label>Pedido #<input type="text" id="orderNumber" style="width:60px" value="1"></label>
+  </div>
 
-                <div class="editor-box">
-                    <textarea id="textInput" placeholder="Digite o conteúdo aqui..."></textarea>
-                </div>
+  <div class="workspace">
+    <div class="editor-section">
+      <div class="controls">
+        <button class="btn" onclick="insertFormat('center')"><i class="fas fa-align-center"></i> Centro</button>
+        <button class="btn" onclick="insertFormat('bold')"><i class="fas fa-bold"></i> Negrito</button>
+        <button class="btn" onclick="insertFormat('size2')"><i class="fas fa-text-height"></i> 2x</button>
+        <button class="btn" onclick="insertFormat('invert')"><i class="fas fa-circle-half-stroke"></i> Inverter</button>
+        <button class="btn" onclick="insertFormat('separator')"><i class="fas fa-minus"></i> Linha</button>
+        <button class="btn" onclick="insertFormat('qr')"><i class="fas fa-qrcode"></i> QR</button>
+        <button class="btn" onclick="insertBarcode()"><i class="fas fa-barcode"></i> Cód. Barras</button>
+        <button class="btn" onclick="insertTableRow()"><i class="fas fa-table-list"></i> Item</button>
+        <button class="btn" onclick="insertVariable()"><i class="fas fa-code"></i> Variável</button>
+      </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <button id="connectBtn" class="btn" style="flex: 1; border-color: var(--primary-color); color: var(--primary-color);">
-                        <i class="fab fa-bluetooth-b"></i> Conectar
-                    </button>
-                    <button id="printBtn" class="btn btn-primary" style="flex: 2;" disabled>
-                        <i class="fas fa-paper-plane"></i> Imprimir Cupom
-                    </button>
-                </div>
-            </div>
+      <div class="editor-box">
+        <textarea id="textInput" placeholder="Digite o conteúdo aqui..."></textarea>
+      </div>
 
-            <!-- Coluna Direita: Live Preview -->
-            <div class="preview-section">
-                <div class="receipt-paper" id="receiptPreview">
-                    <!-- O conteúdo renderizado vai aparecer aqui -->
-                </div>
-            </div>
-        </div>
+      <div class="template-row">
+        <select id="templateSelect"><option value="">Modelos salvos...</option></select>
+        <button class="mini-btn" title="Carregar" onclick="loadSelectedTemplate()"><i class="fas fa-folder-open"></i></button>
+        <button class="mini-btn" title="Salvar como modelo" onclick="saveTemplate()"><i class="fas fa-floppy-disk"></i></button>
+        <button class="mini-btn" title="Excluir modelo" onclick="deleteTemplate()"><i class="fas fa-trash"></i></button>
+      </div>
+
+      <div class="action-row">
+        <button id="connectBtn" class="btn" style="border-color:var(--primary-color); color:var(--primary-color);">
+          <i class="fab fa-bluetooth-b"></i> Conectar
+        </button>
+        <button id="testBtn" class="btn" disabled><i class="fas fa-vial"></i> Teste</button>
+      </div>
+      <div class="action-row">
+        <button id="queueBtn" class="btn btn-outline-success" disabled><i class="fas fa-layer-group"></i> Add à Fila</button>
+        <button id="exportBtn" class="btn"><i class="fas fa-image"></i> Exportar PNG</button>
+      </div>
+      <div class="action-row">
+        <button id="printBtn" class="btn btn-primary" style="flex:1;" disabled>
+          <i class="fas fa-paper-plane"></i> Imprimir Cupom
+        </button>
+      </div>
     </div>
 
-    <div id="toast" class="toast">Mensagem do sistema</div>
+    <div class="preview-section">
+      <div class="paper-scroll" id="paperScroll">
+        <div class="receipt-wrapper">
+          <div class="receipt-paper" id="receiptPreview"></div>
+        </div>
+      </div>
 
-    <script>
-        const PRINTER_SERVICE = '000018f0-0000-1000-8000-00805f9b34fb';
-        const ALT_SERVICE = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="queue" onclick="switchTab('queue')">Fila <span id="queueCount"></span></button>
+        <button class="tab-btn" data-tab="history" onclick="switchTab('history')">Histórico</button>
+      </div>
+      <div class="tab-panel active" id="panel-queue">
+        <div id="queueList"><div class="empty-msg">Nenhum cupom na fila.</div></div>
+        <div class="action-row" style="margin-top:8px;">
+          <button id="printQueueBtn" class="btn btn-primary" disabled><i class="fas fa-forward"></i> Imprimir Fila</button>
+        </div>
+      </div>
+      <div class="tab-panel" id="panel-history">
+        <div id="historyList"><div class="empty-msg">Nenhuma impressão ainda.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-        let bluetoothDevice = null;
-        let printCharacteristic = null;
+<div id="toast" class="toast">Mensagem do sistema</div>
+<div id="modalRoot"></div>
 
-        const connectBtn = document.getElementById('connectBtn');
-        const printBtn = document.getElementById('printBtn');
-        const statusBadge = document.getElementById('statusBadge');
-        const textInput = document.getElementById('textInput');
-        const receiptPreview = document.getElementById('receiptPreview');
+<script>
+/* =========================================================
+   ESTADO GERAL
+   ========================================================= */
+const PRINTER_SERVICE = '000018f0-0000-1000-8000-00805f9b34fb';
+const ALT_SERVICE = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
 
-        // Texto padrão (exatamente calibrado para 32 colunas)
-        textInput.value = "[C][B]LOJA DO DESENVOLVEDOR\n[C]Rua do Codigo, 404\n--------------------------------\n1x CAFE EXPRESSO           5,00\n1x AGUA MINERAL            3,00\n--------------------------------\n[B]TOTAL                      8,00\n\n[C]Acesse nosso cardapio:\n[QR]https://desenvolvedor.com\n\n[C]Obrigado pela visita!";
+let bluetoothDevice = null;
+let printCharacteristic = null;
+let writeFn = null;
+let manualDisconnect = false;
+let reconnectAttempts = 0;
 
-        // --- SISTEMA DE LIVE PREVIEW (1:1 COM A IMPRESSORA) ---
-        function updatePreview() {
-            const text = textInput.value;
-            const lines = text.split('\n');
-            let html = '';
+const connectBtn = document.getElementById('connectBtn');
+const disconnectBtn = document.getElementById('disconnectBtn');
+const printBtn = document.getElementById('printBtn');
+const testBtn = document.getElementById('testBtn');
+const queueBtn = document.getElementById('queueBtn');
+const printQueueBtn = document.getElementById('printQueueBtn');
+const exportBtn = document.getElementById('exportBtn');
+const statusBadge = document.getElementById('statusBadge');
+const textInput = document.getElementById('textInput');
+const receiptPreview = document.getElementById('receiptPreview');
+const paperScroll = document.getElementById('paperScroll');
+const paperWidthSel = document.getElementById('paperWidth');
+const accentToggle = document.getElementById('accentToggle');
+const autoCutToggle = document.getElementById('autoCut');
+const orderNumberInput = document.getElementById('orderNumber');
 
-            for (let line of lines) {
-                // Tratar renderização visual do QR Code
-                if (line.trim().startsWith('[QR]')) {
-                    const qrData = line.trim().replace('[QR]', '');
-                    if (qrData) {
-                        html += `<div style="text-align: center; margin: 10px 0;">
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}" alt="QR" style="width: 140px; height: 140px; image-rendering: pixelated;">
-                                 </div>`;
-                    }
-                    continue;
-                }
+let printQueue = []; // {id, content}
 
-                // Tratar formatações de texto e tags
-                let isBold = false;
-                let isCenter = false;
-                let displayLine = line;
+textInput.value = "[C][B]LOJA DO DESENVOLVEDOR\n[C]Rua do Codigo, 404\n--------------------------------\n1x CAFE EXPRESSO           5,00\n1x AGUA MINERAL            3,00\n--------------------------------\n[B]TOTAL                      8,00\n\n[C]{{data}} {{hora}}  Pedido #{{pedido}}\n[C]Acesse nosso cardapio:\n[QR]https://github.com\n\n[C]Obrigado pela visita!";
 
-                if (displayLine.includes('[B]')) { isBold = true; displayLine = displayLine.replace('[B]', ''); }
-                if (displayLine.includes('[C]')) { isCenter = true; displayLine = displayLine.replace('[C]', ''); }
+function getCols(){ return parseInt(paperWidthSel.value, 10); }
 
-                // CSS Injetado no simulador (Quebra a linha que excede 32 chars igual a máquina real)
-                let style = 'white-space: pre-wrap; word-break: break-all; ';
-                
-                if (isCenter) style += 'text-align: center; ';
-                if (isBold) style += 'font-weight: bold; ';
+/* =========================================================
+   TOAST
+   ========================================================= */
+function showToast(msg){
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toast.classList.remove('show'), 3000);
+}
 
-                // Se a linha estiver vazia após tirar as tags, colocamos um espaço em branco para manter a altura da linha
-                html += `<div style="${style}">${displayLine || ' '}</div>`;
-            }
+/* =========================================================
+   MODAL GENÉRICO (evita prompt()/alert() nativos, que podem
+   ser bloqueados em previews sandboxed)
+   ========================================================= */
+function openModal({ title, fields, confirmLabel = 'Confirmar' }){
+  return new Promise((resolve) => {
+    const root = document.getElementById('modalRoot');
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    const fieldsHtml = fields.map(f => `
+      <div class="modal-field">
+        <label for="mf_${f.id}">${f.label}</label>
+        <input id="mf_${f.id}" type="${f.type || 'text'}" placeholder="${f.placeholder || ''}" value="${f.value || ''}">
+      </div>`).join('');
+    backdrop.innerHTML = `
+      <div class="modal-card">
+        <h3>${title}</h3>
+        ${fieldsHtml}
+        <div class="modal-actions">
+          <button class="btn" id="modalCancel">Cancelar</button>
+          <button class="btn btn-primary" id="modalConfirm">${confirmLabel}</button>
+        </div>
+      </div>`;
+    root.appendChild(backdrop);
+    requestAnimationFrame(() => backdrop.classList.add('show'));
 
-            receiptPreview.innerHTML = html;
-        }
+    const firstInput = backdrop.querySelector('input');
+    if (firstInput) setTimeout(() => firstInput.focus(), 50);
 
-        textInput.addEventListener('input', updatePreview);
-        updatePreview(); // Gera na inicialização
+    function close(result){
+      backdrop.classList.remove('show');
+      setTimeout(() => backdrop.remove(), 200);
+      resolve(result);
+    }
+    backdrop.querySelector('#modalCancel').onclick = () => close(null);
+    backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(null); });
+    backdrop.querySelector('#modalConfirm').onclick = () => {
+      const values = {};
+      fields.forEach(f => values[f.id] = backdrop.querySelector('#mf_' + f.id).value);
+      close(values);
+    };
+    backdrop.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') backdrop.querySelector('#modalConfirm').click(); });
+    });
+  });
+}
 
-        // --- SISTEMA BLUETOOTH E ESC/POS ---
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            toast.textContent = msg;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
-        }
+/* =========================================================
+   VARIÁVEIS DINÂMICAS  {{data}} {{hora}} {{pedido}}
+   ========================================================= */
+function resolveVariables(text){
+  const now = new Date();
+  const data = now.toLocaleDateString('pt-BR');
+  const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const pedido = orderNumberInput.value || '1';
+  return text
+    .replaceAll('{{data}}', data)
+    .replaceAll('{{hora}}', hora)
+    .replaceAll('{{pedido}}', pedido);
+}
 
-        function insertFormat(type) {
-            const cursorPos = textInput.selectionStart;
-            const text = textInput.value;
-            let insertStr = "";
+async function insertVariable(){
+  const res = await openModal({
+    title: 'Inserir variável',
+    fields: [{ id: 'v', label: 'Escolha (edite se quiser outra)', value: '{{data}}', placeholder: '{{data}} | {{hora}} | {{pedido}}' }],
+    confirmLabel: 'Inserir'
+  });
+  if (!res) return;
+  insertAtCursor(res.v);
+}
 
-            if (type === 'separator') insertStr = "\n--------------------------------\n";
-            else if (type === 'bold') insertStr = "[B]";
-            else if (type === 'center') insertStr = "[C]";
-            else if (type === 'qr') insertStr = "\n[QR]https://seusite.com.br\n";
+/* =========================================================
+   INSERÇÃO NO TEXTAREA
+   ========================================================= */
+function insertAtCursor(str){
+  const cursorPos = textInput.selectionStart;
+  const text = textInput.value;
+  textInput.value = text.slice(0, cursorPos) + str + text.slice(cursorPos);
+  const newPos = cursorPos + str.length;
+  textInput.focus();
+  textInput.setSelectionRange(newPos, newPos);
+  updatePreview();
+}
 
-            textInput.value = text.slice(0, cursorPos) + insertStr + text.slice(cursorPos);
-            textInput.focus();
-            updatePreview(); 
-        }
+function insertFormat(type){
+  let insertStr = '';
+  if (type === 'separator') insertStr = '\n' + '-'.repeat(getCols()) + '\n';
+  else if (type === 'bold') insertStr = '[B]';
+  else if (type === 'center') insertStr = '[C]';
+  else if (type === 'size2') insertStr = '[SIZE2]';
+  else if (type === 'invert') insertStr = '[INV]';
+  else if (type === 'qr') insertStr = '\n[QR]https://seusite.com.br\n';
+  insertAtCursor(insertStr);
+}
 
-        connectBtn.addEventListener('click', async () => {
-            try {
-                if (!navigator.bluetooth) throw new Error('Navegador sem suporte Bluetooth.');
-                
-                showToast('Buscando...');
-                bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: [PRINTER_SERVICE, ALT_SERVICE, '49535343-fe7d-4ae5-8fa9-9fafd205e455']
-                });
-                
-                bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
-                const server = await bluetoothDevice.gatt.connect();
-                
-                let service;
-                try { service = await server.getPrimaryService(PRINTER_SERVICE); } 
-                catch (e) { service = await server.getPrimaryService(ALT_SERVICE); }
-                
-                const characteristics = await service.getCharacteristics();
-                printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
+async function insertBarcode(){
+  const res = await openModal({
+    title: 'Código de barras (CODE128)',
+    fields: [{ id: 'data', label: 'Conteúdo', placeholder: 'Ex: 7891234567895' }],
+    confirmLabel: 'Inserir'
+  });
+  if (!res || !res.data) return;
+  insertAtCursor(`\n[BARCODE]${res.data}\n`);
+}
 
-                if (printCharacteristic) {
-                    statusBadge.classList.add('connected');
-                    statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> ' + (bluetoothDevice.name || 'Conectado');
-                    printBtn.disabled = false;
-                    showToast('Pronto para imprimir!');
-                }
-            } catch (error) {
-                showToast('Erro: ' + error.message);
-            }
-        });
+async function insertTableRow(){
+  const res = await openModal({
+    title: 'Adicionar item ao cupom',
+    fields: [
+      { id: 'desc', label: 'Descrição', placeholder: 'Ex: 1x Cafe Expresso' },
+      { id: 'price', label: 'Valor', placeholder: 'Ex: 5,00' }
+    ],
+    confirmLabel: 'Inserir'
+  });
+  if (!res || (!res.desc && !res.price)) return;
+  const cols = getCols();
+  const price = (res.price || '0,00').trim();
+  let desc = (res.desc || '').trim();
+  const maxDescLen = Math.max(cols - price.length - 1, 1);
+  if (desc.length > maxDescLen) desc = desc.slice(0, maxDescLen);
+  const spaces = Math.max(cols - desc.length - price.length, 1);
+  const line = desc + ' '.repeat(spaces) + price;
+  insertAtCursor(line + '\n');
+}
 
-        function onDisconnected() {
-            statusBadge.classList.remove('connected');
-            statusBadge.innerHTML = '<i class="fas fa-times-circle"></i> Desconectado';
-            printBtn.disabled = true;
-        }
+/* =========================================================
+   PARSE DE LINHA (compartilhado entre preview e impressão)
+   ========================================================= */
+function parseLine(rawLine){
+  let text = rawLine;
+  let isBold = false, isCenter = false, isDouble = false, isInvert = false;
+  if (text.includes('[B]')) { isBold = true; text = text.split('[B]').join(''); }
+  if (text.includes('[C]')) { isCenter = true; text = text.split('[C]').join(''); }
+  if (text.includes('[SIZE2]')) { isDouble = true; text = text.split('[SIZE2]').join(''); }
+  if (text.includes('[INV]')) { isInvert = true; text = text.split('[INV]').join(''); }
+  return { text, isBold, isCenter, isDouble, isInvert };
+}
 
-        function getQRCodeBytes(text) {
-            let bytes = [];
-            const textBytes = new TextEncoder().encode(text);
-            const storeLen = textBytes.length + 3;
-            const pL = storeLen & 0xFF;
-            const pH = (storeLen >> 8) & 0xFF;
+/* =========================================================
+   LIVE PREVIEW
+   ========================================================= */
+function fakeBarcodeHtml(data){
+  let bars = '';
+  for (let i = 0; i < data.length * 3 + 10; i++){
+    const c = data.charCodeAt(i % data.length) || 65;
+    const w = (c % 3) + 1;
+    const gap = (c % 2 === 0) ? 2 : 1;
+    bars += `<span style="width:${w}px;height:${18 + (c % 20)}px;margin-right:${gap}px;"></span>`;
+  }
+  return `<div class="barcode-fake">${bars}</div><div class="barcode-label">${escapeHtml(data)}</div>`;
+}
+function escapeHtml(s){ return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-            bytes.push(0x1B, 0x61, 0x01); 
-            bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06);
-            bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30);
-            bytes.push(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30);
-            bytes.push(...textBytes);
-            bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
-            bytes.push(0x1B, 0x61, 0x00);
+function updatePreview(){
+  const cols = getCols();
+  receiptPreview.style.width = cols + 'ch';
+  receiptPreview.style.minWidth = cols + 'ch';
+  receiptPreview.style.maxWidth = cols + 'ch';
 
-            return bytes;
-        }
+  const text = resolveVariables(textInput.value);
+  const lines = text.split('\n');
+  let html = '';
 
-        printBtn.addEventListener('click', async () => {
-            if (!printCharacteristic) return;
-            const text = textInput.value;
-            if (!text) return;
+  for (let line of lines){
+    const trimmed = line.trim();
+    if (trimmed.startsWith('[QR]')){
+      const qrData = trimmed.replace('[QR]', '');
+      if (qrData){
+        html += `<div style="text-align:center;margin:10px 0;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}" alt="QR" style="width:140px;height:140px;image-rendering:pixelated;">
+        </div>`;
+      }
+      continue;
+    }
+    if (trimmed.startsWith('[BARCODE]')){
+      const bcData = trimmed.replace('[BARCODE]', '');
+      if (bcData) html += fakeBarcodeHtml(bcData);
+      continue;
+    }
 
-            try {
-                printBtn.disabled = true;
-                printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Imprimindo...';
+    const { text: displayLine, isBold, isCenter, isDouble, isInvert } = parseLine(line);
+    let style = 'white-space:pre-wrap; word-break:break-all;';
+    if (isCenter) style += 'text-align:center;';
+    if (isBold) style += 'font-weight:bold;';
+    if (isDouble) style += 'font-size:1.9em; line-height:1.1; font-weight:bold;';
+    if (isInvert) style += 'background:#000; color:#fff; display:inline-block; width:100%;';
+    html += `<div style="${style}">${escapeHtml(displayLine) || ' '}</div>`;
+  }
+  receiptPreview.innerHTML = html;
+  scaleReceiptToFit();
+}
 
-                let bytes = [];
-                bytes.push(0x1B, 0x40);
+/* Escala o cupom para caber em qualquer largura de tela, sem cortar conteúdo */
+function scaleReceiptToFit(){
+  const wrapper = receiptPreview.parentElement;
+  const available = paperScroll.clientWidth - 24;
+  const natural = receiptPreview.scrollWidth;
+  const scale = natural > available ? Math.max(available / natural, 0.55) : 1;
+  receiptPreview.style.transform = `scale(${scale})`;
+  wrapper.style.height = (receiptPreview.scrollHeight * scale) + 'px';
+  wrapper.style.width = (receiptPreview.scrollWidth * scale) + 'px';
+}
 
-                const lines = text.split('\n');
-                
-                for (let line of lines) {
-                    const trimmed = line.trim();
-                    
-                    if (trimmed.startsWith('[QR]')) {
-                        const qrData = trimmed.replace('[QR]', '');
-                        if (qrData) {
-                            bytes.push(...getQRCodeBytes(qrData));
-                            bytes.push(0x0A);
-                        }
-                        continue;
-                    }
+new ResizeObserver(scaleReceiptToFit).observe(paperScroll);
+textInput.addEventListener('input', updatePreview);
+paperWidthSel.addEventListener('change', updatePreview);
+orderNumberInput.addEventListener('input', updatePreview);
+updatePreview();
 
-                    let isBold = false;
-                    let isCenter = false;
-                    let processLine = line; // Usamos a linha sem .trim() para preservar os espaços
+/* =========================================================
+   TABS (Fila / Histórico)
+   ========================================================= */
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+}
 
-                    if (processLine.includes('[B]')) { isBold = true; processLine = processLine.replace('[B]', ''); }
-                    if (processLine.includes('[C]')) { isCenter = true; processLine = processLine.replace('[C]', ''); }
+/* =========================================================
+   CODE PAGE 860 (acentuação PT-PT/PT-BR em vez de remover)
+   ========================================================= */
+const CP860 = {
+  'Ç':0x80,'ü':0x81,'é':0x82,'â':0x83,'ã':0x84,'à':0x85,'Á':0x86,'ç':0x87,'ê':0x88,'Ê':0x89,
+  'è':0x8A,'Í':0x8B,'Ô':0x8C,'ì':0x8D,'Ã':0x8E,'Â':0x8F,
+  'É':0x90,'À':0x91,'È':0x92,'ô':0x93,'õ':0x94,'ò':0x95,'Ú':0x96,'ù':0x97,'Ì':0x98,'Õ':0x99,
+  'Ü':0x9A,'¢':0x9B,'£':0x9C,'Ù':0x9D,'₧':0x9E,'Ó':0x9F,
+  'á':0xA0,'í':0xA1,'ó':0xA2,'ú':0xA3,'ñ':0xA4,'Ñ':0xA5,'ª':0xA6,'º':0xA7,'¿':0xA8,'Ò':0xA9,
+  '¬':0xAA,'½':0xAB,'¼':0xAC,'¡':0xAD,'«':0xAE,'»':0xAF
+};
 
-                    if (isCenter) bytes.push(0x1B, 0x61, 1);
-                    else bytes.push(0x1B, 0x61, 0);
+function encodeLine(str){
+  const bytes = [];
+  const useAccents = accentToggle.checked;
+  for (const ch of str){
+    const code = ch.codePointAt(0);
+    if (code < 128){ bytes.push(code); continue; }
+    if (useAccents && CP860[ch] !== undefined){ bytes.push(CP860[ch]); continue; }
+    // fallback: remove acento e usa ascii aproximado
+    const stripped = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const strippedCode = stripped.codePointAt(0);
+    bytes.push(strippedCode < 128 ? strippedCode : 0x3F); // '?'
+  }
+  return bytes;
+}
+function asciiSafe(str){
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7E]/g, '?');
+}
 
-                    if (isBold) bytes.push(0x1B, 0x45, 1);
-                    else bytes.push(0x1B, 0x45, 0);
+/* =========================================================
+   BLUETOOTH: CONECTAR / DESCONECTAR / RECONECTAR
+   ========================================================= */
+connectBtn.addEventListener('click', async () => {
+  try{
+    if (!navigator.bluetooth) throw new Error('Navegador sem suporte Bluetooth.');
+    manualDisconnect = false;
+    reconnectAttempts = 0;
+    showToast('Buscando dispositivos...');
+    bluetoothDevice = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [PRINTER_SERVICE, ALT_SERVICE, '49535343-fe7d-4ae5-8fa9-9fafd205e455']
+    });
+    bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+    await connectToDevice();
+  } catch (error){
+    showToast('Erro: ' + error.message);
+  }
+});
 
-                    const normalizedLine = processLine.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                    const encodedText = new TextEncoder().encode(normalizedLine);
-                    
-                    bytes.push(...encodedText);
-                    bytes.push(0x0A);
-                }
+async function connectToDevice(){
+  const server = await bluetoothDevice.gatt.connect();
+  let service;
+  try { service = await server.getPrimaryService(PRINTER_SERVICE); }
+  catch (e) { service = await server.getPrimaryService(ALT_SERVICE); }
 
-                bytes.push(0x0A, 0x0A, 0x0A);
+  const characteristics = await service.getCharacteristics();
+  printCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse);
 
-                const dataArray = new Uint8Array(bytes);
-                const CHUNK_SIZE = 40; 
-                
-                for (let i = 0; i < dataArray.length; i += CHUNK_SIZE) {
-                    const chunk = dataArray.slice(i, i + CHUNK_SIZE);
-                    await printCharacteristic.writeValue(chunk);
-                    await new Promise(resolve => setTimeout(resolve, 20)); 
-                }
+  if (!printCharacteristic){
+    showToast('Nenhuma característica de escrita encontrada nesta impressora.');
+    return;
+  }
 
-            } catch (error) {
-                showToast('Falha: ' + error.message);
-            } finally {
-                printBtn.disabled = false;
-                printBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Imprimir Cupom';
-            }
-        });
-    </script>
+  // Usa o modo de escrita correto suportado pela característica
+  if (printCharacteristic.properties.writeWithoutResponse){
+    writeFn = (data) => printCharacteristic.writeValueWithoutResponse(data);
+  } else {
+    writeFn = (data) => printCharacteristic.writeValue(data);
+  }
+
+  statusBadge.classList.add('connected');
+  statusBadge.innerHTML = '<i class="fas fa-check-circle"></i> ' + (bluetoothDevice.name || 'Conectado');
+  disconnectBtn.classList.add('visible');
+  printBtn.disabled = false;
+  testBtn.disabled = false;
+  queueBtn.disabled = false;
+  reconnectAttempts = 0;
+  showToast('Pronto para imprimir!');
+}
+
+disconnectBtn.addEventListener('click', () => {
+  manualDisconnect = true;
+  if (bluetoothDevice && bluetoothDevice.gatt.connected) bluetoothDevice.gatt.disconnect();
+  else onDisconnected();
+});
+
+async function onDisconnected(){
+  printCharacteristic = null;
+  writeFn = null;
+  printBtn.disabled = true;
+  testBtn.disabled = true;
+  queueBtn.disabled = true;
+
+  if (!manualDisconnect && reconnectAttempts < 3){
+    reconnectAttempts++;
+    statusBadge.innerHTML = `<i class="fas fa-rotate fa-spin"></i> Reconectando (${reconnectAttempts}/3)...`;
+    await new Promise(r => setTimeout(r, 1200));
+    try{
+      await connectToDevice();
+      return;
+    }catch(e){
+      // segue para o estado desconectado abaixo se falhar
+    }
+  }
+
+  statusBadge.classList.remove('connected');
+  statusBadge.innerHTML = '<i class="fas fa-times-circle"></i> Desconectado';
+  disconnectBtn.classList.remove('visible');
+  if (!manualDisconnect) showToast('Conexão perdida com a impressora.');
+}
+
+/* =========================================================
+   MONTAGEM DE BYTES ESC/POS
+   ========================================================= */
+function getQRCodeBytes(text){
+  const bytes = [];
+  const textBytes = new TextEncoder().encode(text);
+  const storeLen = textBytes.length + 3;
+  const pL = storeLen & 0xFF;
+  const pH = (storeLen >> 8) & 0xFF;
+  bytes.push(0x1B, 0x61, 0x01);
+  bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06);
+  bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30);
+  bytes.push(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30);
+  bytes.push(...textBytes);
+  bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
+  bytes.push(0x1B, 0x61, 0x00);
+  return bytes;
+}
+
+function getBarcodeBytes(data){
+  const bytes = [];
+  const safeData = asciiSafe(data);
+  bytes.push(0x1B, 0x61, 0x01);      // centralizar
+  bytes.push(0x1D, 0x68, 70);        // altura
+  bytes.push(0x1D, 0x77, 2);         // largura do módulo
+  bytes.push(0x1D, 0x48, 2);         // HRI abaixo do código
+  const payload = '{B' + safeData;   // subset B, o firmware calcula o checksum
+  const payloadBytes = new TextEncoder().encode(payload);
+  bytes.push(0x1D, 0x6B, 73, payloadBytes.length, ...payloadBytes); // GS k 73 (CODE128)
+  bytes.push(0x0A);
+  bytes.push(0x1B, 0x61, 0x00);      // resetar alinhamento
+  return bytes;
+}
+
+function buildReceiptBytes(rawText){
+  const text = resolveVariables(rawText);
+  const bytes = [];
+  bytes.push(0x1B, 0x40); // reset
+
+  const lines = text.split('\n');
+  for (let line of lines){
+    const trimmed = line.trim();
+    if (trimmed.startsWith('[QR]')){
+      const qrData = trimmed.replace('[QR]', '');
+      if (qrData) bytes.push(...getQRCodeBytes(qrData), 0x0A);
+      continue;
+    }
+    if (trimmed.startsWith('[BARCODE]')){
+      const bcData = trimmed.replace('[BARCODE]', '');
+      if (bcData) bytes.push(...getBarcodeBytes(bcData));
+      continue;
+    }
+
+    const { text: processLine, isBold, isCenter, isDouble, isInvert } = parseLine(line);
+
+    bytes.push(0x1B, 0x61, isCenter ? 1 : 0);          // alinhamento
+    bytes.push(0x1B, 0x45, isBold ? 1 : 0);             // negrito
+    bytes.push(0x1D, 0x21, isDouble ? 0x11 : 0x00);     // tamanho duplo
+    bytes.push(0x1D, 0x42, isInvert ? 0x01 : 0x00);     // inverter cores
+
+    bytes.push(...encodeLine(processLine));
+    bytes.push(0x0A);
+  }
+
+  // reset final de formatação
+  bytes.push(0x1B, 0x61, 0, 0x1B, 0x45, 0, 0x1D, 0x21, 0x00, 0x1D, 0x42, 0x00);
+  bytes.push(0x0A, 0x0A, 0x0A);
+
+  if (autoCutToggle.checked){
+    bytes.push(0x1D, 0x56, 0x01); // corte parcial (mais compatível)
+  }
+  return bytes;
+}
+
+async function sendBytes(byteArray){
+  const dataArray = new Uint8Array(byteArray);
+  const CHUNK_SIZE = 100;
+  for (let i = 0; i < dataArray.length; i += CHUNK_SIZE){
+    const chunk = dataArray.slice(i, i + CHUNK_SIZE);
+    await writeFn(chunk);
+    await new Promise(resolve => setTimeout(resolve, 12));
+  }
+}
+
+async function printContent(content, { registerHistory = true } = {}){
+  if (!printCharacteristic || !writeFn){ showToast('Impressora não conectada.'); return false; }
+  try{
+    await sendBytes(buildReceiptBytes(content));
+    if (registerHistory) await addToHistory(content);
+    if (registerHistory){
+      const n = parseInt(orderNumberInput.value || '1', 10);
+      orderNumberInput.value = isNaN(n) ? 1 : n + 1;
+      await saveCounter();
+    }
+    return true;
+  }catch(error){
+    showToast('Falha ao imprimir: ' + error.message);
+    return false;
+  }
+}
+
+/* =========================================================
+   BOTÕES: IMPRIMIR / TESTE
+   ========================================================= */
+printBtn.addEventListener('click', async () => {
+  if (!textInput.value) return;
+  printBtn.disabled = true;
+  printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Imprimindo...';
+  await printContent(textInput.value);
+  printBtn.disabled = false;
+  printBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Imprimir Cupom';
+});
+
+testBtn.addEventListener('click', async () => {
+  const testText = '[C][B]TESTE DE CONEXAO\n[C]Impressora OK!\n[C]{{data}} {{hora}}';
+  testBtn.disabled = true;
+  await printContent(testText, { registerHistory: false });
+  testBtn.disabled = false;
+});
+
+/* =========================================================
+   FILA DE IMPRESSÃO
+   ========================================================= */
+queueBtn.addEventListener('click', () => {
+  if (!textInput.value.trim()) return;
+  printQueue.push({ id: Date.now(), content: textInput.value });
+  renderQueue();
+  showToast('Cupom adicionado à fila.');
+});
+
+function renderQueue(){
+  const list = document.getElementById('queueList');
+  const countEl = document.getElementById('queueCount');
+  countEl.textContent = printQueue.length ? `(${printQueue.length})` : '';
+  printQueueBtn.disabled = printQueue.length === 0 || !printCharacteristic;
+  if (!printQueue.length){
+    list.innerHTML = '<div class="empty-msg">Nenhum cupom na fila.</div>';
+    return;
+  }
+  list.innerHTML = printQueue.map((item, idx) => `
+    <div class="list-item">
+      <div>Cupom #${idx + 1}<div class="meta">${item.content.split('\n')[0].replace(/\[.*?\]/g,'').slice(0,28)}</div></div>
+      <div class="actions">
+        <button class="mini-btn" onclick="removeFromQueue(${item.id})" title="Remover"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`).join('');
+}
+function removeFromQueue(id){
+  printQueue = printQueue.filter(i => i.id !== id);
+  renderQueue();
+}
+
+printQueueBtn.addEventListener('click', async () => {
+  printQueueBtn.disabled = true;
+  printQueueBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Imprimindo fila...';
+  const items = [...printQueue];
+  for (const item of items){
+    const ok = await printContent(item.content);
+    if (ok) removeFromQueue(item.id);
+    await new Promise(r => setTimeout(r, 400));
+  }
+  printQueueBtn.innerHTML = '<i class="fas fa-forward"></i> Imprimir Fila';
+  renderQueue();
+});
+
+/* =========================================================
+   EXPORTAR COMO PNG
+   ========================================================= */
+exportBtn.addEventListener('click', async () => {
+  const prevTransform = receiptPreview.style.transform;
+  receiptPreview.style.transform = 'none';
+  try{
+    const canvas = await html2canvas(receiptPreview, { backgroundColor: '#ffffff', scale: 2 });
+    const link = document.createElement('a');
+    link.download = 'cupom-' + Date.now() + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('Imagem exportada!');
+  }catch(e){
+    showToast('Erro ao exportar: ' + e.message);
+  }finally{
+    receiptPreview.style.transform = prevTransform;
+  }
+});
+
+/* =========================================================
+   ARMAZENAMENTO: TEMPLATES, HISTÓRICO, CONTADOR DE PEDIDO
+   (window.storage — dados pessoais, não compartilhados)
+   ========================================================= */
+async function safeStorageList(prefix){
+  try{ const r = await window.storage.list(prefix, false); return r ? r.keys : []; }
+  catch(e){ return []; }
+}
+async function safeStorageGet(key){
+  try{ const r = await window.storage.get(key, false); return r ? r.value : null; }
+  catch(e){ return null; }
+}
+async function safeStorageSet(key, value){
+  try{ await window.storage.set(key, value, false); return true; }
+  catch(e){ showToast('Erro ao salvar dados.'); return false; }
+}
+async function safeStorageDelete(key){
+  try{ await window.storage.delete(key, false); return true; }
+  catch(e){ return false; }
+}
+
+async function refreshTemplateSelect(){
+  const sel = document.getElementById('templateSelect');
+  const keys = await safeStorageList('template:');
+  sel.innerHTML = '<option value="">Modelos salvos...</option>' +
+    keys.map(k => `<option value="${k}">${k.replace('template:', '')}</option>`).join('');
+}
+
+async function saveTemplate(){
+  const res = await openModal({
+    title: 'Salvar modelo',
+    fields: [{ id: 'name', label: 'Nome do modelo', placeholder: 'Ex: Cupom padrão' }],
+    confirmLabel: 'Salvar'
+  });
+  if (!res || !res.name) return;
+  const key = 'template:' + res.name.trim();
+  const ok = await safeStorageSet(key, textInput.value);
+  if (ok){ showToast('Modelo salvo.'); await refreshTemplateSelect(); }
+}
+
+async function loadSelectedTemplate(){
+  const sel = document.getElementById('templateSelect');
+  if (!sel.value) return;
+  const content = await safeStorageGet(sel.value);
+  if (content !== null){ textInput.value = content; updatePreview(); showToast('Modelo carregado.'); }
+}
+
+async function deleteTemplate(){
+  const sel = document.getElementById('templateSelect');
+  if (!sel.value) return;
+  await safeStorageDelete(sel.value);
+  showToast('Modelo excluído.');
+  await refreshTemplateSelect();
+}
+
+async function addToHistory(content){
+  const key = 'history:' + Date.now();
+  await safeStorageSet(key, JSON.stringify({ content, printedAt: new Date().toISOString() }));
+  const keys = await safeStorageList('history:');
+  if (keys.length > 20){
+    const sorted = keys.sort();
+    for (let i = 0; i < sorted.length - 20; i++) await safeStorageDelete(sorted[i]);
+  }
+  await refreshHistory();
+}
+
+async function refreshHistory(){
+  const list = document.getElementById('historyList');
+  const keys = (await safeStorageList('history:')).sort().reverse();
+  if (!keys.length){
+    list.innerHTML = '<div class="empty-msg">Nenhuma impressão ainda.</div>';
+    return;
+  }
+  const items = [];
+  for (const key of keys.slice(0, 20)){
+    const raw = await safeStorageGet(key);
+    if (!raw) continue;
+    try{ items.push({ key, ...JSON.parse(raw) }); } catch(e){}
+  }
+  list.innerHTML = items.map(item => {
+    const date = new Date(item.printedAt);
+    const label = date.toLocaleString('pt-BR');
+    const preview = item.content.split('\n')[0].replace(/\[.*?\]/g, '').slice(0, 28);
+    return `
+      <div class="list-item">
+        <div>${preview || '(sem título)'}<div class="meta">${label}</div></div>
+        <div class="actions">
+          <button class="mini-btn" title="Reimprimir" onclick='reprintHistory(${JSON.stringify(item.content)})'><i class="fas fa-print"></i></button>
+        </div>
+      </div>`;
+  }).join('');
+}
+function reprintHistory(content){
+  textInput.value = content;
+  updatePreview();
+  showToast('Cupom carregado no editor. Clique em Imprimir.');
+}
+
+async function saveCounter(){
+  await safeStorageSet('counter:pedido', orderNumberInput.value);
+}
+async function loadCounter(){
+  const v = await safeStorageGet('counter:pedido');
+  if (v !== null) orderNumberInput.value = v;
+}
+
+/* =========================================================
+   INICIALIZAÇÃO
+   ========================================================= */
+(async function init(){
+  await refreshTemplateSelect();
+  await refreshHistory();
+  await loadCounter();
+  updatePreview();
+})();
+</script>
 </body>
 </html>
