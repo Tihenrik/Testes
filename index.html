@@ -47,7 +47,7 @@
         }
 
         .header {
-            padding: 20px;
+            padding: 15px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -81,7 +81,6 @@
             color: var(--success-color);
         }
 
-        /* Sistema de Grid Responsivo */
         .workspace {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -90,17 +89,11 @@
             flex: 1;
         }
 
-        @media (max-width: 768px) {
-            .workspace {
-                grid-template-columns: 1fr; /* Muda para uma coluna em celulares */
-            }
-        }
-
-        /* Área do Editor */
         .editor-section {
             display: flex;
             flex-direction: column;
             gap: 15px;
+            min-width: 0; /* Previne que flexbox ignore limites */
         }
 
         .editor-box {
@@ -111,6 +104,7 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            overflow-x: auto; /* Permite rolagem se o texto for largo demais */
         }
 
         textarea {
@@ -124,16 +118,14 @@
             font-family: 'Courier New', Courier, monospace;
             font-size: 14px;
             background: transparent;
+            white-space: pre; /* IMPEDE que o navegador quebre a linha sozinho, mantendo o formato intacto */
+            overflow-wrap: normal;
         }
 
         .controls {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 8px;
-        }
-
-        @media (max-width: 480px) {
-            .controls { grid-template-columns: repeat(2, 1fr); }
         }
 
         .btn {
@@ -162,7 +154,6 @@
         .btn-primary:hover { background-color: var(--primary-hover); }
         .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Área de Visualização (O Cupom) */
         .preview-section {
             background-color: #cbd5e1;
             border-radius: 12px;
@@ -171,24 +162,25 @@
             justify-content: center;
             align-items: flex-start;
             overflow-y: auto;
-            max-height: 500px;
+            max-height: 550px;
         }
 
+        /* CONFIGURAÇÃO EXATA PARA O TAMANHO DA BOBINA 58MM (32 COLUNAS) */
         .receipt-paper {
             background-color: #ffffff;
             color: #000000;
-            width: 100%;
-            max-width: 320px; /* Largura simulada da bobina 57.5mm */
+            width: 32ch; /* Força exatamente 32 caracteres de largura */
+            min-width: 32ch;
+            max-width: 32ch;
+            box-sizing: content-box; /* Garante que os 32ch são apenas para o texto, ignorando o padding */
             padding: 20px 15px 30px 15px;
             font-family: 'Courier New', Courier, monospace;
             font-size: 14px;
-            line-height: 1.3;
+            line-height: 1.2;
             position: relative;
             box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            word-wrap: break-word;
         }
 
-        /* Efeito de corte serrilhado no final do papel */
         .receipt-paper::after {
             content: "";
             position: absolute;
@@ -198,6 +190,14 @@
             height: 10px;
             background-size: 20px 20px;
             background-image: radial-gradient(circle at 10px 10px, transparent 12px, #ffffff 13px);
+        }
+
+        /* Otimizações drásticas para telas de celular pequenas para não "esmagar" o app */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .workspace { grid-template-columns: 1fr; padding: 15px; gap: 15px; }
+            .controls { grid-template-columns: repeat(2, 1fr); }
+            .preview-section { padding: 20px 10px; }
         }
 
         .toast {
@@ -276,21 +276,19 @@
         const textInput = document.getElementById('textInput');
         const receiptPreview = document.getElementById('receiptPreview');
 
-        // Texto padrão
+        // Texto padrão (exatamente calibrado para 32 colunas)
         textInput.value = "[C][B]LOJA DO DESENVOLVEDOR\n[C]Rua do Codigo, 404\n--------------------------------\n1x CAFE EXPRESSO           5,00\n1x AGUA MINERAL            3,00\n--------------------------------\n[B]TOTAL                      8,00\n\n[C]Acesse nosso cardapio:\n[QR]https://desenvolvedor.com\n\n[C]Obrigado pela visita!";
 
-        // --- SISTEMA DE LIVE PREVIEW (WYSIWYG) ---
+        // --- SISTEMA DE LIVE PREVIEW (1:1 COM A IMPRESSORA) ---
         function updatePreview() {
             const text = textInput.value;
             const lines = text.split('\n');
             let html = '';
 
             for (let line of lines) {
-                const trimmed = line.trim();
-                
-                // Tratar renderização visual do QR Code usando API pública
-                if (trimmed.startsWith('[QR]')) {
-                    const qrData = trimmed.replace('[QR]', '');
+                // Tratar renderização visual do QR Code
+                if (line.trim().startsWith('[QR]')) {
+                    const qrData = line.trim().replace('[QR]', '');
                     if (qrData) {
                         html += `<div style="text-align: center; margin: 10px 0;">
                                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrData)}" alt="QR" style="width: 140px; height: 140px; image-rendering: pixelated;">
@@ -299,7 +297,7 @@
                     continue;
                 }
 
-                // Tratar formatações de texto
+                // Tratar formatações de texto e tags
                 let isBold = false;
                 let isCenter = false;
                 let displayLine = line;
@@ -307,20 +305,21 @@
                 if (displayLine.includes('[B]')) { isBold = true; displayLine = displayLine.replace('[B]', ''); }
                 if (displayLine.includes('[C]')) { isCenter = true; displayLine = displayLine.replace('[C]', ''); }
 
-                // white-space pre-wrap garante que os espaços múltiplos sejam respeitados visualmente
-                let style = 'white-space: pre-wrap; ';
+                // CSS Injetado no simulador (Quebra a linha que excede 32 chars igual a máquina real)
+                let style = 'white-space: pre-wrap; word-break: break-all; ';
+                
                 if (isCenter) style += 'text-align: center; ';
                 if (isBold) style += 'font-weight: bold; ';
 
+                // Se a linha estiver vazia após tirar as tags, colocamos um espaço em branco para manter a altura da linha
                 html += `<div style="${style}">${displayLine || ' '}</div>`;
             }
 
             receiptPreview.innerHTML = html;
         }
 
-        // Atualizar preview sempre que digitar e na inicialização
         textInput.addEventListener('input', updatePreview);
-        updatePreview();
+        updatePreview(); // Gera na inicialização
 
         // --- SISTEMA BLUETOOTH E ESC/POS ---
         function showToast(msg) {
@@ -342,12 +341,12 @@
 
             textInput.value = text.slice(0, cursorPos) + insertStr + text.slice(cursorPos);
             textInput.focus();
-            updatePreview(); // Atualiza a visão na hora
+            updatePreview(); 
         }
 
         connectBtn.addEventListener('click', async () => {
             try {
-                if (!navigator.bluetooth) throw new Error('Bluetooth não suportado neste navegador.');
+                if (!navigator.bluetooth) throw new Error('Navegador sem suporte Bluetooth.');
                 
                 showToast('Buscando...');
                 bluetoothDevice = await navigator.bluetooth.requestDevice({
@@ -382,7 +381,6 @@
             printBtn.disabled = true;
         }
 
-        // Função corrigida: sem o comando que gera o número "2"
         function getQRCodeBytes(text) {
             let bytes = [];
             const textBytes = new TextEncoder().encode(text);
@@ -390,24 +388,13 @@
             const pL = storeLen & 0xFF;
             const pH = (storeLen >> 8) & 0xFF;
 
-            bytes.push(0x1B, 0x61, 0x01); // Centralizar
-
-            // O COMANDO DE MODELO FOI REMOVIDO DAQUI
-            
-            // 1. Configurar Tamanho do Módulo (0x06 = tamanho ideal para 58mm)
+            bytes.push(0x1B, 0x61, 0x01); 
             bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06);
-            
-            // 2. Configurar Nível de Correção de Erro (Nível L = 0x30)
             bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30);
-            
-            // 3. Armazenar Dados no buffer
             bytes.push(0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30);
             bytes.push(...textBytes);
-            
-            // 4. Imprimir o QR
             bytes.push(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);
-            
-            bytes.push(0x1B, 0x61, 0x00); // Voltar alinhamento para esquerda
+            bytes.push(0x1B, 0x61, 0x00);
 
             return bytes;
         }
@@ -422,7 +409,7 @@
                 printBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Imprimindo...';
 
                 let bytes = [];
-                bytes.push(0x1B, 0x40); // Reset
+                bytes.push(0x1B, 0x40);
 
                 const lines = text.split('\n');
                 
@@ -440,9 +427,10 @@
 
                     let isBold = false;
                     let isCenter = false;
+                    let processLine = line; // Usamos a linha sem .trim() para preservar os espaços
 
-                    if (line.includes('[B]')) { isBold = true; line = line.replace('[B]', ''); }
-                    if (line.includes('[C]')) { isCenter = true; line = line.replace('[C]', ''); }
+                    if (processLine.includes('[B]')) { isBold = true; processLine = processLine.replace('[B]', ''); }
+                    if (processLine.includes('[C]')) { isCenter = true; processLine = processLine.replace('[C]', ''); }
 
                     if (isCenter) bytes.push(0x1B, 0x61, 1);
                     else bytes.push(0x1B, 0x61, 0);
@@ -450,17 +438,15 @@
                     if (isBold) bytes.push(0x1B, 0x45, 1);
                     else bytes.push(0x1B, 0x45, 0);
 
-                    const normalizedLine = line.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    const normalizedLine = processLine.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                     const encodedText = new TextEncoder().encode(normalizedLine);
                     
                     bytes.push(...encodedText);
-                    bytes.push(0x0A); // Quebra de linha
+                    bytes.push(0x0A);
                 }
 
-                // Alimentar papel
                 bytes.push(0x0A, 0x0A, 0x0A);
 
-                // Chunking (Evita o travamento do BLE)
                 const dataArray = new Uint8Array(bytes);
                 const CHUNK_SIZE = 40; 
                 
